@@ -19,6 +19,7 @@ _dll_version = dll.Version()
 dll.GetBoolean.restype = BOOL
 dll.GetString.restype = c_char_p
 dll.GetDouble.restype = c_double
+from threading import Lock
 
 
 class StackError(Exception):
@@ -137,6 +138,7 @@ class BaseStack(object):
 class Stack(BaseStack):
     def __init__(self):
         super(Stack, self).__init__()
+        self.lock = Lock()
         self.vtypes = (
             None,
             self.GetBoolean,
@@ -177,8 +179,9 @@ class Stack(BaseStack):
             raise StackError('Error while executing %s (%i)' % (method, result))
 
     def execute(self, method, *args):
-        result = self._call(method, *args)
-        return result
+        with self.lock:
+            result = self._call(method, *args)
+            return result
 
     def push(self, value):
         if isinstance(value, bool):

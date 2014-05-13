@@ -1,9 +1,17 @@
 from pyuo.oeuo import UO
 from .extensions import use_item, use_on
-from itertools import imap, ifilter
+from .itertools import imap, ifilter
+import gevent
 
 class Item(object):
+    """Represents UO item."""
+
     def __init__(self, index=None):
+        """Initialize the item.
+
+        The item will be 'empty' if no index provided. When index is provided, it willl call UO.GetItem to create the
+        item instance.
+        """
         self.id_ = None
         self.type_ = None
         self.kind = None
@@ -15,15 +23,22 @@ class Item(object):
         self.rep = None
         self.col = None
         if index is not None:
-            self.from_index(index)
+            self._from_index(index)
 
-    def from_index(self, index):
+    def _from_index(self, index):
+        """Internal method to initialize the item with UO.GetItem."""
         self.id_, self.type_, self.kind, self.cont_id, self.x, self.y, self.z, self.stack, self.rep, self.col = UO.GetItem(index)
 
     def is_in_backpack(self):
+        """Check if the item is in player's backpack and return a boolean."""
         return self.cont_id == UO.BackpackID
 
     def containers(self, depth=3):
+        """Return a recursive list of containers this item is located in.
+
+         .. method:: containers()
+                     containers(depths)
+        """
         result = []
         current = ItemFilter().with_id(self.cont_id).first()
         result.append(current)
@@ -39,10 +54,10 @@ class Item(object):
     def use(self):
         return use_item(self.id_)
 
-    def use_on(self, target, callback=None, timeout=None, failure=None):
+    def use_on(self, target, timeout=None):
         if isinstance(target, Item):
             target = target.id_
-        use_on(self.id_, target, callback, timeout, failure)
+        return use_on(self.id_, target, timeout)
 
 class ItemFilter(object):
     def __init__(self, visible_only=False):
@@ -50,8 +65,9 @@ class ItemFilter(object):
         self.filters = []
 
     def search(self):
+        count = None
         count =  UO.ScanItems()
-        return ifilter(lambda item: all(filter(item) for filter in self.filters), imap(Item, xrange(count)))
+        return ifilter(lambda item: all(filt(item) for filt in self.filters), imap(Item, xrange(count)))
 
     def first(self):
         srch = self.search()

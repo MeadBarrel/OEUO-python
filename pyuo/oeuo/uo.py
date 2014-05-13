@@ -5,6 +5,7 @@ __license__ = "GPL"
 
 
 from .stack import Stack
+import traceback
 
 RVARS = ['AR',
          'BackpackID',
@@ -80,14 +81,15 @@ RVARS = ['AR',
          'Shard',
          'Stamina',
          'Str',
-#         'SysMsg',
+         'SysMsg',
          'TargCurs',
          'TP',
          'Weight']
 
+
 class _UO(object):
-    """Object representing the game environment. All UO.dll functions and vars are exported as members of
-    this object."""
+    """Object representing the game environment. All UO.dll functions and vars are exported as members of this object.
+    """
     rvars = RVARS
     def __init__(self):
         self.stack = Stack()
@@ -99,31 +101,33 @@ class _UO(object):
         """Drags the object specified by id nid.
 
         This drag is performed by the client and affects the UO.LLifted* variables.
-        Corresponding drop should be completedy with a UO.Click() command.
+        Corresponding drop should be completed with a UO.Click() command.
         """
         return self.Call('CliDrag', nid)
 
-    def Click(self, nX, nY, bLeft, bDown, bUp, bMC):
+    def Click(self, x, y, bLeft, bDown, bUp, bMC):
         """Mimics a click of the mouse in a specific position on the screen.
 
         So if you want to click something, the mouse button should go down and up. If you want to drag something,
         the mouse button should only go down but not up. Dropping means only up.
         """
-        return self.Call("Click", nX, nY, bLeft, bDown, bUp, bMC)
+        return self.Call("Click", x, y, bLeft, bDown, bUp, bMC)
 
     def ContTop(self, index):
-        """Moves the gump enumerated as index to the top of the gump heap, i.e. make it the top level gump/container (index = 0)."""
+        """Moves the gump enumerated as index to the top of the gump heap, i.e. make it the top level gump/container
+        (index = 0)."""
         return self.Call("ContTop", index)
 
     def Drag(self, nid, namnt=None):
         """Drag the object specified by id nid via packets.
 
-        This will not affect the UO.LLifted* variables.
-        Alternatively, specify the amount namnt to drag if the object is a stack. namnt defaults to 1.
-        A drag initiated in this manner should be terminated with a drop via one of the following commands:
-        UO.DropC,
-        UO.DropG,
-        or UO.DropPD.
+        This will not affect the UO.LLifted* variables. Alternatively, specify the amount namnt to drag if the object is
+        a stack. namnt defaults to 1. A drag initiated in this manner should be terminated with a drop via one of the
+        following commands:
+
+        * UO.DropC,
+        * UO.DropG,
+        * or UO.DropPD.
         """
         if namnt is None:
             return self.Call("Drag", nid)
@@ -308,6 +312,9 @@ class _UO(object):
         Invisible objects may be excluded using the sole parameter.
         Once objects are scanned, their parameters are discovered by iterating over the UO.GetItem command,
         increasing the index from 0 to nCnt - 1.
+
+        .. method:: ScanItems()
+                    ScanItems(visible_only)
         """
         return self.Call("ScanItems", visible_only)
 

@@ -28,9 +28,8 @@ class Script(object):
                 for bind in self.binds:
                     if bind.regexp.match(line):
                         bind.callback(line)
-            newRef, nCont = UO.ScanJournal(newRef)
-            self.old_ref = newRef
-            gevent.sleep(.2)
+            self.old_ref, nCont = UO.ScanJournal(newRef)
+            gevent.sleep(.1)
 
 
 

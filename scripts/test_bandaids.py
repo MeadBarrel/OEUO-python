@@ -2,6 +2,7 @@ from pyuo.oeuo import UO
 from pyuo.manager import Manager
 from pyuo.manager.decorators import Loop
 from pyuo.tools.items import ItemFilter
+import gevent
 import time
 import wx
 
@@ -57,17 +58,17 @@ class Script(object):
         self.current_heal = clb
         if 'progress_bar' in Manager.scripts_loaded:
             Manager.scripts_loaded['progress_bar'].add_bar('first', wx.GREEN_BRUSH, clb)
-        self.continue_auto = True
 
     def bandage_self(self):
+        if UO.Hits >= UO.MaxHits:
+            UO.ExMsg(UO.CharID, 'You are not damaged')
+            return
         if self.bandaids is not None:
-            self.bandaids.use_on(UO.CharID, callback=self.do_bandage_self)
+            if self.bandaids.use_on(UO.CharID):
+                self.do_bandage_self()
 
-
-    @Loop(.2)
     def low_health_warnings(self):
         while True:
-            yield
             percent = float(UO.Hits) / UO.MaxHits
             if self.lh_temp_warned and percent > self.lh_thres:
                 self.lh_temp_warned = False
@@ -76,35 +77,29 @@ class Script(object):
                 self.lh_temp_warned = True
                 self.inform_red('LOW HEALTH')
                 continue
+            gevent.sleep(.2)
 
-    @Loop(.2)
     def auto_bandage_self(self):
         while True:
+            gevent.sleep(.2)
             if UO.Hits >= UO.MaxHits or not self.auto:
-                yield
                 continue
             if self.current_heal:
                 hv = self.current_heal()
                 if hv <= 0: self.current_heal = None
             if not self.current_heal:
-                self.continue_auto = False
                 self.bandage_self()
-                while not self.continue_auto:
-                    yield
 
-    @Loop(2)
+
     def begin(self):
         while True:
-            print "BEGIN"
-            #self.bandaids = ItemFilter().with_type(0xe21).in_backpack_rec(10).first()
             self.bandaids = ItemFilter().with_type(0xe21).in_backpack_rec().first()
-            print "FOUND: ", self.bandaids
-            yield
-
+            gevent.sleep(2)
 
     def on_begin(self):
-        self.begin()
-        self.auto_bandage_self()
+        gevent.sleep(0)
+        gevent.spawn(self.begin)
+        gevent.spawn(self.auto_bandage_self)
         self.low_health_warnings()
 
 

@@ -7,12 +7,12 @@ __license__ = "GPL"
 from ..oeuo import UO
 from .script import Script
 from threading import Thread
-from time import sleep, time
+from time import time, sleep
 from string import ascii_lowercase
-from .keymanager import KeyManager
 from .key_codes import codes
 from itertools import imap
 import wx
+import gevent
 import win32api, win32con
 
 
@@ -74,8 +74,21 @@ class KeyBinder(object):
         for (keys, method) in self.binds.iteritems():
             keys = keys.split('+')
             if all(imap(self.getkey, keys)):
-                method()
+                gevent.spawn(method)
 
+
+class App(wx.App):
+    def MainLoop(self):
+        self.keepGoing = True
+        evtloop = wx.EventLoop()
+        old = wx.EventLoop.GetActive()
+        wx.EventLoop.SetActive(evtloop)
+        while self.keepGoing:
+            gevent.sleep(.1)
+            while evtloop.Pending():
+                evtloop.Dispatch()
+            self.ProcessIdle()
+        wx.EventLoop.SetActive(old)
 
 
 class _Manager(object):
@@ -84,7 +97,7 @@ class _Manager(object):
         self.scripts_loaded = {}
         self.loops = []
         self.key_manager = KeyBinder(self)
-        self.app = wx.App()
+        self.app = App()
         #self.key_manager = KeyManager(self)
 
     def __getattr__(self, item):
@@ -107,7 +120,6 @@ class _Manager(object):
                 script.execute = environment['execute']
             script.name = environment['name']
         self.add_script(script)
-        print self.scripts_loaded
 
     def add_script(self, script):
         if script.name in self.scripts_loaded:
@@ -116,7 +128,7 @@ class _Manager(object):
 
     def run_script(self, script):
         if hasattr(script, 'on_begin'):
-            script.on_begin()
+            gevent.spawn(script.on_begin)
         if hasattr(script, 'execute'):
             Thread(target=script.execute).start()
 #            thread = ScriptThread(script)
@@ -142,24 +154,36 @@ class _Manager(object):
     def stop(self):
         raise Exception('STOP')
 
-    def run(self):
+    def _run(self):
         self.key_manager.bind("CONTROL+c", self.stop)
-        Thread(target=self.run_all).start()
-        Thread(target=self.main_loop).start()
+        self.run_all()
+        gevent.spawn(self.main_loop)
         self.app.MainLoop()
         #Thread(target=self.app.MainLoop).start()
         #self.main_loop()
+        #Thread(target=self.run_all).start()
+        #self.main_loop()
 
+        #Thread(target=self.main_loop).start()
+        #self.run_all()
+        #gevent.spawn(self.main_loop)
+
+        #Thread(target=self.app.MainLoop).start()
+        #self.main_loop()
+
+    def run(self):
+        self._run()
+    #    gevent.spawn(self._run)
 
     def main_loop(self):
         while True:
             try:
                 self.key_manager.execute()
-                self.execute_loops()
-                sleep(0.1)
+                #self.execute_loops()
             except Exception as E:
                 self.free_all()
                 raise E
+            gevent.sleep(0.1)
 
 
 
