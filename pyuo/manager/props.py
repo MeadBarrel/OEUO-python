@@ -282,21 +282,97 @@ class IntListSetting(Setting):
         self.wx_remove_button.Bind(wx.EVT_BUTTON, self.remove_button_pressed)
         return self.wx_control
 
-class ItemKindListSetting(IntListSetting):
+class ItemKindListSetting(Setting):
+    _required_type = list
+    _default = []
+
     def item_picked(self, event):
         event.Skip()
         id = event.target.id_
         item = get_by_id(id)
         if item is not None:
-            self.wx_input.Value = str(item.type_)
-        self.add_button_pressed()
+            if self.find_in_list(item.type_):
+                return
+            name = item.name
+            type_ = item.type_
+            self.value.append([type_, name])
+            self.wx_list.Append([str(type_), name])
+
+    def find_in_list(self, value):
+        print "DSADSA", value
+        return value in [i[0] for i in self.iter_list()]
+
+    def iter_list(self):
+        for idx in xrange(self.wx_list.GetItemCount()):
+            value = int(self.wx_list.GetItem(idx, 0).GetText())
+            name = self.wx_list.GetItem(idx, 1).GetText()
+            yield value, name
+
+    def serialize(self, element):
+        for item in self.value:
+            subel = ElementTree.SubElement(element, 'item')
+            subel.set('value', str(item[0]))
+            subel.set('name', str(item[1]))
+
+    def unserialize(self, value):
+        return None
+
+    def parse_xml(self, element):
+        result = []
+        for subel in element.findall('item'):
+            value = subel.get('value')
+            name = subel.get('name')
+            result.append([int(value), name])
+        return result
+
+    def remove_button_pressed(self, event):
+        cnt = self.wx_list.GetSelectedItemCount()
+        if cnt == 0:
+            return
+        index = self.wx_list.GetFirstSelected()
+        selection = [index]
+        while len(selection) != cnt:
+            index = self.wx_list.GetNextSelected(index)
+            selection.append(index)
+        for selected in selection:
+            self.value.pop(selected)
+            self.wx_list.DeleteItem(selected)
+
+    def item_selected(self, event):
+        if self.wx_list.GetSelectedItemCount() == 0:
+            self.wx_remove_button.Disable()
+        else:
+            self.wx_remove_button.Enable()
+
+    def update_wx(self):
+        self.wx_list.ClearAll()
+        self.wx_list.InsertColumn(0, 'type', width=100)
+        self.wx_list.InsertColumn(1, 'name', wx.LIST_FORMAT_RIGHT)
+        for value, name in self.value:
+            self.wx_list.Append([str(value), name])
 
     def init_wx(self, parent):
         super(ItemKindListSetting, self).init_wx(parent)
+        self.wx_control = wx.Panel(parent)
+        self.wx_sizer = wx.FlexGridSizer(cols=1, rows=2)
+        self.wx_sizer.AddGrowableCol(0)
+        self.wx_list = wx.ListCtrl(self.wx_control, style=wx.LC_REPORT)
+        self.wx_list.InsertColumn(0, 'type', width=100)
+        self.wx_list.InsertColumn(1, 'name', wx.LIST_FORMAT_RIGHT)
+        self.wx_list.SetMinSize((self.wx_list.MinWidth, 70))
+        self.wx_list.Bind(wx.EVT_LISTBOX, self.item_selected)
         self.pick_item_button = ItemSelectButton(self.wx_control, label='Pick')
         self.pick_item_button.Bind(EVT_ITEM_SELECT, self.item_picked)
-        self.btn_sizer.Add(self.pick_item_button)
+        self.wx_remove_button = wx.Button(self.wx_control, label='Remove')
+        self.wx_sizer.Add(self.wx_list, 1, wx.EXPAND)
+        self.btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.btn_sizer.Add(self.pick_item_button, 2, wx.EXPAND)
+        self.btn_sizer.Add(self.wx_remove_button, 1, wx.ALIGN_RIGHT)
+        self.wx_sizer.Add(self.btn_sizer, 1, wx.EXPAND)
+        self.wx_control.SetSizer(self.wx_sizer)
+        self.wx_remove_button.Bind(wx.EVT_BUTTON, self.remove_button_pressed)
         return self.wx_control
+
 
 class StrListSetting(Setting):
     _required_type = list

@@ -13,7 +13,7 @@ class AutoLootScript(ScriptBase):
     autoloot_min_value = IntSetting('Minimal item value', default=0, group='Rules')
     autoloot_limit_weight = BoolSetting("Don't allow overweight", default=True, group='Safety')
     autoloot_weight_base = BoolSetting("Use base weight", default=False, group='Safety')
-    autoloot_force_items = ItemKindListSetting("Loot even if seems invaluable", default=[0xeed], group='Rules', priority=9)
+    autoloot_force_items = ItemKindListSetting("Loot even if seems invaluable", default=[[0xeed, 'gold']], group='Rules', priority=9)
     autoloot_deny_items = ItemKindListSetting('Never loot', group='Rules', priority=10)
     loot_bag = IntSetting('Loot bag (0 for backpack)', default=0, group='Bags')
     gold_bag = IntSetting('Gold bag (0 for backpack)', default=0, group='Bags')
