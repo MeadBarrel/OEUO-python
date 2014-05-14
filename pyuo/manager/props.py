@@ -77,6 +77,7 @@ class Setting(object):
     __metaclass__ = ABCMeta
     _required_type = None
     _default = 0
+    __value = None
     wx_control = None
 
     def __init__(self, name, default=None, on_change=None, group=None, priority=0):
@@ -86,7 +87,6 @@ class Setting(object):
         if not isinstance(self.group, str):
             raise SettingError('group must be string')
         self.priority = priority
-        self.__value = None
         self.__on_change = on_change
 
 
@@ -117,11 +117,10 @@ class Setting(object):
         return isinstance(value, self._required_type)
 
     def __set__(self, instance, value):
-        if self.__value == value:
-            return
         if not self.check_type(value):
             raise SettingError()
         self.__value = value
+        print "Set to %s and now it is %s" %(self.__value, self.value)
         if self.__on_change:
             self.__on_change()
         if self.wx_control:
@@ -280,6 +279,51 @@ class IntListSetting(Setting):
         self.wx_input.Bind(wx.EVT_TEXT, self.text_modified)
         self.wx_add_button.Bind(wx.EVT_BUTTON, self.add_button_pressed)
         self.wx_remove_button.Bind(wx.EVT_BUTTON, self.remove_button_pressed)
+        return self.wx_control
+
+class ItemSetting(Setting):
+    _required_type = list
+    _default = [0,'unknown']
+
+    def item_picked(self, event):
+        event.Skip()
+        id_ = event.target.id_
+        if id_ is not None:
+            if self.value[0] == id_:
+                return
+            item = get_by_id(id_)
+            name = item.name
+            self.value = [id_, name]
+            self.update_wx()
+
+    def update_wx(self):
+        print "UPDATE %s" % str(self.value)
+        self.wx_label.LabelText = '%i (%s)' % tuple(self.value)
+        self.wx_control.Refresh()
+
+    def serialize(self, element):
+        element.set('item_id', str(self.value[0]))
+        element.set('item_name', self.value[1])
+
+    def unserialize(self, value):
+        return None
+
+    def parse_xml(self, element):
+        id_ = element.get('item_id')
+        name = element.get('item_name')
+        return [int(id_), name]
+
+    def init_wx(self, parent):
+        super(ItemSetting, self).__init__(parent)
+        self.wx_control = wx.Panel(parent)
+        self.wx_sizer = wx.FlexGridSizer(rows=1, cols=2)
+        self.wx_sizer.AddGrowableCol(0)
+        self.wx_label = wx.StaticText(self.wx_control)
+        self.wx_pick_button = ItemSelectButton(self.wx_control, label='Pick')
+        self.wx_pick_button.Bind(EVT_ITEM_SELECT, self.item_picked)
+        self.wx_sizer.Add(self.wx_label)
+        self.wx_sizer.Add(self.wx_pick_button)
+        self.wx_control.SetSizer(self.wx_sizer)
         return self.wx_control
 
 class ItemKindListSetting(Setting):

@@ -67,15 +67,12 @@ class ScriptBase(object):
         except:
             #TODO: don't do this silently
             return
-        for e in tree.iter():
-            print e.tag
 
         root = tree.getroot()
         settings = root.find('settings')
         prop_objects = dict(self.fetch_settings())
         if settings is not None:
             for setting in settings.findall('setting'):
-                print "SETTING"
                 name = setting.get('name')
                 if not name in prop_objects:
                     continue
@@ -85,9 +82,7 @@ class ScriptBase(object):
                 else:
                     unserialized = prop_objects[name].parse_xml(setting)
                 setattr(self, name, unserialized)
-        print settings.find('keymap')
         for bind_el in settings.findall('keymap'):
-            print "BIND"
             name = bind_el.get('name')
             keys = bind_el.get('keys')
             bind = self.find_bind(name)
@@ -124,6 +119,5 @@ class ScriptBase(object):
         for name in dir(self):
             attr = getattr(self, name)
             if hasattr(attr, '_bind_deco'):
-                print 'dsadsads', attr
                 for bd in attr._bind_deco:
                     self._binds.append(KeyBind(attr, *bd))

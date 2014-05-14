@@ -15,8 +15,8 @@ class AutoLootScript(ScriptBase):
     autoloot_weight_base = BoolSetting("Use base weight", default=False, group='Safety')
     autoloot_force_items = ItemKindListSetting("Loot even if seems invaluable", default=[[0xeed, 'gold']], group='Rules', priority=9)
     autoloot_deny_items = ItemKindListSetting('Never loot', group='Rules', priority=10)
-    loot_bag = IntSetting('Loot bag (0 for backpack)', default=0, group='Bags')
-    gold_bag = IntSetting('Gold bag (0 for backpack)', default=0, group='Bags')
+    loot_bag = ItemSetting('Loot bag', default=[UO.BackpackID, 'Backpack'], group='Bags')
+    gold_bag = ItemSetting('Gold bag', default=[UO.BackpackID, 'Backpack'], group='Bags')
 
     def load(self, manager):
         self.AS = self.manager.AS
