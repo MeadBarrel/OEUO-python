@@ -1,24 +1,28 @@
+from pyuo.manager.script import ScriptBase
 from pyuo.oeuo import UO
 from pyuo.manager import Manager
-from pyuo.manager.decorators import Loop
 from pyuo.tools.items import ItemFilter
+from pyuo.manager.props import *
 import gevent
 import time
 import wx
 
-class Script(object):
-    def __init__(self):
+class BandaidsScript(ScriptBase):
+    script_name = 'bandaids'
+
+    #tst = IntSetting('ololo')
+    #tst2 = IntSetting('lol')
+    lh_thres = FloatSetting('Low health bound', default=.4)
+    auto = BoolSetting('Auto bandage', default=False)
+    watch_journal = BoolSetting('Watch journal', default=True)
+
+    def load(self, manager):
         self.I = 1.0
-        self.auto = False
         self.lhwarn = True
-        self.lh_thres = .4
         self.lh_temp_warned = False
         self.continue_auto = True
         self.bandaids = None
         self.current_heal = None
-        Manager.key_manager.bind('MBUTTON', self.bandage_self)
-        Manager.key_manager.bind('CONTROL+i', self.toggle_auto)
-        Manager.key_manager.bind('CONTROL+l', self.toggle_lowhealth_warning)
         if 'journal_event' in Manager.scripts_loaded:
             strings = ('That being is not damaged',
                        'You apply the bandages, but they barely help.',
@@ -27,15 +31,28 @@ class Script(object):
             Manager.scripts_loaded['journal_event'].bind('|'.join(strings), self.inform_red)
 
     def inform_red(self, line):
+        if not self.watch_journal:
+            return
         UO.ExMsg(UO.CharID, line, 0, 40)
 
+    @method_bind(name='Toggle auto heal')
     def toggle_auto(self):
         self.auto = not self.auto
         UO.SysMessage('toggled autobandage to %s' % str(self.auto))
 
+    @method_bind(name='Toggle low health warnings')
     def toggle_lowhealth_warning(self):
         self.lhwarn = not self.lhwarn
         UO.SysMessage('toggled low health warnings to %s' % str(self.lhwarn))
+
+    @method_bind(name='Bandage self')
+    def bandage_self(self):
+        if UO.Hits >= UO.MaxHits:
+            UO.ExMsg(UO.CharID, 'You are not damaged')
+            return
+        if self.bandaids is not None:
+            if self.bandaids.use_on(UO.CharID):
+                self.do_bandage_self()
 
     def healing_formula(self, on_self=True):
         result_time = 8
@@ -58,14 +75,6 @@ class Script(object):
         self.current_heal = clb
         if 'progress_bar' in Manager.scripts_loaded:
             Manager.scripts_loaded['progress_bar'].add_bar('first', wx.GREEN_BRUSH, clb)
-
-    def bandage_self(self):
-        if UO.Hits >= UO.MaxHits:
-            UO.ExMsg(UO.CharID, 'You are not damaged')
-            return
-        if self.bandaids is not None:
-            if self.bandaids.use_on(UO.CharID):
-                self.do_bandage_self()
 
     def low_health_warnings(self):
         while True:
@@ -96,7 +105,8 @@ class Script(object):
             self.bandaids = ItemFilter().with_type(0xe21).in_backpack_rec().first()
             gevent.sleep(2)
 
-    def on_begin(self):
+    def main(self):
+        print "STARTED BANDAIDS"
         gevent.sleep(0)
         gevent.spawn(self.begin)
         gevent.spawn(self.auto_bandage_self)

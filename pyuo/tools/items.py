@@ -1,7 +1,60 @@
-from pyuo.oeuo import UO
+from pyuo.oeuo import UO, AS
 from .extensions import use_item, use_on
 from .itertools import imap, ifilter
+import itertools
+import re
 import gevent
+
+
+class ItemProperty(object):
+    def __init__(self, name, value=1.0, min_=None, max_=None):
+        print "ADDED %s %s" % (name, value)
+        self.name = name
+        self.value = value
+        self.min_ = min_
+        self.max_ = max_
+
+
+class ItemProperties(object):
+    #re_plaintext = '((?:\w| )+?)'
+    re_name = re.compile('([a-zA-Z-_ ]+)')
+    re_numerics = re.compile('(\d(?:\d|\.)+)')
+    def __init__(self, property_strings):
+        self._properties = {}
+        for property_string in property_strings.split('\n'):
+            self.parse_property(property_string.strip())
+
+    def __getitem__(self, item):
+        if item in self._properties:
+            return self._properties[item]
+        else:
+            return ItemProperty(item, 0, 0, 0)
+
+    def __contains__(self, item):
+        return item in self._properties
+
+    def full_string(self):
+        result = ''
+        for name, property in self._properties.iteritems():
+            result += '%s: %s' % (name, str(property.value))
+
+    def parse_property(self, property_string):
+        print "TRY PARSE '%s'" % property_string
+        match_name = self.re_name.match(property_string)
+        if not match_name:
+            return ItemProperty(property_string)
+        name = match_name.groups()[0]
+        name = name.strip()
+        nums = self.re_numerics.findall(property_string)
+        if not nums:
+            self._properties[name] = ItemProperty(name)
+        elif len(nums) == 1:
+            self._properties[name] = ItemProperty(name, float(nums[0]))
+        else:
+            min_ = float(nums[0])
+            max_ = float(nums[1])
+            value = min_ + (max_ - min_)/2
+            self._properties[name] = ItemProperty(name, value, min_, max_)
 
 class Item(object):
     """Represents UO item."""
@@ -22,8 +75,52 @@ class Item(object):
         self.stack = None
         self.rep = None
         self.col = None
+        self._properties = None
         if index is not None:
             self._from_index(index)
+
+    def __hash__(self):
+        return hash(self.id_)
+
+    def __eq__(self, other):
+        if isinstance(other, int):
+            return self.id_ == other
+        elif isinstance(other, Item):
+            return self.id_ == other.id_
+        else:
+            raise TypeError
+
+    @property
+    def properties(self):
+        if self._properties is None:
+            self._properties = ItemProperties(self.info[1])
+        return self._properties
+
+    def full_string(self):
+        prop = self.info
+        result = 'ITEM: %s\n' % prop[0]
+        result += 'id: %i\n' % self.id_
+        result += 'kind: %i\n' % self.kind
+        result += 'col: %s\n' % str(self.col)
+        result += 'Properties %s\n' % prop[1]
+        return result
+
+    @property
+    def distance_to_player(self):
+        x, y = UO.CharPosX, UO.CharPosY
+        return max(abs(x - self.x), abs(y - self.y))
+
+    @property
+    def on_ground(self):
+        return self.cont_id == 0
+
+    @property
+    def info(self):
+        return UO.Property(self.id_)
+
+    @property
+    def name(self):
+        return self.info[0]
 
     def _from_index(self, index):
         """Internal method to initialize the item with UO.GetItem."""
@@ -81,6 +178,9 @@ class ItemFilter(object):
         self.filters.append(lambda item: item.id_ == id_)
         return self
 
+    def with_name(self, regexp):
+        self.filters.append(lambda item: re.match(regexp, item.property[0]))
+
     def with_type(self, type_):
         self.filters.append(lambda item: item.type_ == type_)
         return self
@@ -100,9 +200,22 @@ class ItemFilter(object):
     def in_backpack_rec(self, depth=3):
         return self.in_container_rec(UO.BackpackID, depth)
 
+def get_by_id(id_):
+    for item in iter_items():
+        if item.id_ == id_:
+            return item
+    return None
 
+def get_items(visible_only=False):
+    count = UO.ScanItems(visible_only)
+    return map(Item, xrange(count))
 
+def iter_items(visible_only=False):
+    count = UO.ScanItems(visible_only)
+    return itertools.imap(Item, xrange(count))
 
-
+def iter_items_async(visible_only=False):
+    count = UO.ScanItems(visible_only)
+    return imap(Item, xrange(count))
 
 

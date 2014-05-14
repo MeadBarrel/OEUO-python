@@ -4,16 +4,14 @@ __author__ = 'Lai Tash'
 __email__ = 'lai.tash@gmail.com'
 __license__ = "GPL"
 
-from ..oeuo import UO
-from .script import Script
+from ..oeuo import UO, AS
 from threading import Thread
-from time import time, sleep
-from string import ascii_lowercase
-from .key_codes import codes
-from itertools import imap
+from .props import KeyBind
+from .key_manager import KeyBinder
+from .script import ScriptBase
 import wx
 import gevent
-import win32api, win32con
+from .gui.gui import GUIFrame
 
 
 class ScriptThread(Thread):
@@ -25,59 +23,8 @@ class ScriptThread(Thread):
     def run(self):
         self.script.execute()
 
-
-class KeyBinder(object):
-    keys_list = set(codes.keys())
-
-    def __init__(self, manager):
-        self.manager = manager
-        self.keys = {key: None for key in self.keys_list}
-        self.binds = {}
-
-    def uniform(self, keys_string):
-        keys = [key.strip() for key in keys_string.split('+')]
-        for key in keys:
-            if key not in self.keys_list:
-                raise Exception("Cannot bind [%s]: %s is unknown" % key)
-        keys.sort()
-        return '+'.join(keys)
-
-
-    def bind(self, keys_string, method):
-        keys_string = self.uniform(keys_string)
-        self.binds[keys_string] = method
-
-    def has_bind(self, method):
-        return method in self.binds.itervalues()
-
-    def get_bind(self, method):
-        for key, meth in self.binds.iteritems():
-            if meth is method:
-                return key
-
-    def remove_bind(self, method):
-        if not self.has_bind(method):
-            return
-        for key, meth in self.binds.items():
-            if meth is method:
-                del self.binds[key]
-
-    def getkey_int(self, key_int):
-        i = win32api.GetAsyncKeyState(key_int)
-        return i < 0
-
-    def getkey(self, key):
-        key_int = codes[key]
-        return self.getkey_int(key_int)
-
-    def execute(self):
-        for (keys, method) in self.binds.iteritems():
-            keys = keys.split('+')
-            if all(imap(self.getkey, keys)):
-                gevent.spawn(method)
-
-
 class App(wx.App):
+
     def MainLoop(self):
         self.keepGoing = True
         evtloop = wx.EventLoop()
@@ -91,60 +38,54 @@ class App(wx.App):
         wx.EventLoop.SetActive(old)
 
 
+
 class _Manager(object):
     def __init__(self):
-        self.uo = UO
+        self.UO = UO
+        self.AS = AS
         self.scripts_loaded = {}
         self.loops = []
         self.key_manager = KeyBinder(self)
         self.app = App()
+        self.gui = GUIFrame(self)
+        self.main_loop_task = None
+        self.scripts_tasks = []
+        self.stopped = False
         #self.key_manager = KeyManager(self)
 
-    def __getattr__(self, item):
-        if item in self.scripts_loaded:
-            return self.scripts_loaded[item]
+    #def __getattr__(self, item):
+    #    if item in self.scripts_loaded:
+    #        return self.scripts_loaded[item]
 
-    def execute_method(self, method):
-        method()
+    def show_gui(self):
+        self.gui.Show()
 
     def load(self, abs_path):
-        environment = {'UO': UO, 'Manager': self}
+        environment = {'UO': UO, 'AS': self.AS, 'Manager': self}
         execfile(abs_path, environment)
-        if 'Script' in environment:
-            script = environment['Script']
-            if not hasattr(script, 'name'):
-                script.name = script.__class__.__name__
-        else:
-            script = Script()
-            if 'execute' in environment:
-                script.execute = environment['execute']
-            script.name = environment['name']
-        self.add_script(script)
+        for name, attr in environment.iteritems():
+            if isinstance(attr, type) and issubclass(attr, ScriptBase) and attr.__name__.find('Script') == len(attr.__name__) - 6:
+                script = attr
+                script._path = abs_path
+                self.add_script(script)
+
+    def save(self, script):
+        if hasattr(script, 'save_xml'):
+            script.save_xml()
 
     def add_script(self, script):
         if script.name in self.scripts_loaded:
             raise("Script %s is already loaded" % script.name)
-        self.scripts_loaded[script.name] = script()
+        instance = script(self)
+        self.scripts_loaded[script.name()] = instance
 
     def run_script(self, script):
-        if hasattr(script, 'on_begin'):
-            gevent.spawn(script.on_begin)
-        if hasattr(script, 'execute'):
-            Thread(target=script.execute).start()
-#            thread = ScriptThread(script)
-#            thread.start()
+        if hasattr(script, 'main'):
+            self.scripts_tasks.append(gevent.spawn(script.main))
 
     def run_all(self):
         for script in self.scripts_loaded.values():
             self.run_script(script)
-
-    def run_loop(self, loop_method):
-        self.loops.append(loop_method)
-
-    def execute_loops(self):
-        for loop in self.loops:
-            loop.execute()
-        self.loops = [loop for loop in self.loops if not loop.stopped]
 
     def free_all(self):
         for script in self.scripts_loaded.values():
@@ -152,34 +93,31 @@ class _Manager(object):
                 script.free()
 
     def stop(self):
-        raise Exception('STOP')
+        for task in self.scripts_tasks:
+            task.kill()
+        self.main_loop_task.kill()
+        self.action_stack_loop.kill()
+        self.app.keepGoing = False
+        for script in self.scripts_loaded.values():
+            script.save_xml()
 
     def _run(self):
-        self.key_manager.bind("CONTROL+c", self.stop)
+        bind = KeyBind(self.stop, 'STOP', 'CONTROL+c')
+        bind.bind(self)
         self.run_all()
-        gevent.spawn(self.main_loop)
+        self.main_loop_task = gevent.spawn(self.main_loop)
+        self.action_stack_loop = gevent.spawn(AS.main_loop)
         self.app.MainLoop()
-        #Thread(target=self.app.MainLoop).start()
-        #self.main_loop()
-        #Thread(target=self.run_all).start()
-        #self.main_loop()
-
-        #Thread(target=self.main_loop).start()
-        #self.run_all()
-        #gevent.spawn(self.main_loop)
-
-        #Thread(target=self.app.MainLoop).start()
-        #self.main_loop()
 
     def run(self):
         self._run()
-    #    gevent.spawn(self._run)
 
     def main_loop(self):
+        self.show_gui()
+        self.gui.update_settings_panel()
         while True:
             try:
                 self.key_manager.execute()
-                #self.execute_loops()
             except Exception as E:
                 self.free_all()
                 raise E

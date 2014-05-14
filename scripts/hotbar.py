@@ -1,5 +1,6 @@
 from pyuo.oeuo import UO
 from pyuo.manager import Manager
+from pyuo.manager.script import ScriptBase
 import wx
 
 COLUMNS = 12
@@ -15,9 +16,9 @@ class HotBar(wx.Frame):
         super(HotBar, self).__init__(None)
 
 
-class Script(object):
-    name = 'hotbars'
-
-    def __init__(self):
-        self.frames = set()
+#class Script(ScriptBase):
+#    name = 'hotbars'
+#
+#    def __init__(self):
+#        self.frames = set()
 

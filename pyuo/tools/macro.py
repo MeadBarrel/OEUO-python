@@ -1,6 +1,6 @@
-from pyuo.oeuo import UO
+from pyuo.oeuo import UO, AS
 
 def use_item(id_):
     UO.LObjectID = id_
-    UO.Macro(17, 0)
+    AS.Macro(17, 0)
 

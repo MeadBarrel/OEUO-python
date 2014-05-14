@@ -1,7 +1,6 @@
-import pygtk
-pygtk.require20()
 import wx
 import gevent
+from pyuo.manager.script import ScriptBase
 
 WIDTH = 100
 HEIGHT = 20
@@ -10,10 +9,10 @@ class Frame(wx.Frame):
     def __init__(self):
         super(Frame, self).__init__(None, style=wx.BORDER_NONE|wx.STAY_ON_TOP|wx.TRANSPARENT_WINDOW)
 
-class Script(object):
-    name = 'progress_bar'
+class ProgressBarScript(ScriptBase):
+    script_name = 'progress_bar'
 
-    def __init__(self):
+    def load(self, manager):
         self.frame = Frame()
         self.frame.SetSizeWH(0, 0)
         self.frame.SetAutoLayout(True)
@@ -53,7 +52,7 @@ class Script(object):
             self.arrange()
 
 
-    def on_begin(self):
+    def main(self):
         self.panel.Show()
         self.frame.Show()
 
@@ -61,5 +60,6 @@ class Script(object):
             self.frame.Refresh()
             self.panel.Refresh()
             gevent.sleep(.5)
+
 
 
