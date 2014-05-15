@@ -4,6 +4,7 @@ from .macro import use_item
 import gevent
 
 
+
 def wait_for_cursor(timeout=None):
     if timeout:
         started = time.time()

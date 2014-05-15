@@ -93,9 +93,9 @@ class _UO(object):
     rvars = RVARS
     def __init__(self):
         self.stack = Stack()
-        self.CliNr = 1
-        #print self.Query('GetFeatures')
-        #self.rvars = self.stack.ListRVars()
+
+    def set_client(self, client):
+        self.CliNr = client
 
     def CliDrag(self, nid):
         """Drags the object specified by id nid.

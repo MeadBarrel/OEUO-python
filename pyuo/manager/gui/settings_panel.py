@@ -1,6 +1,33 @@
 import wx
 import wx.lib.scrolledpanel as scrolled
+from ..key_manager import CombinationListener
 from ..props import Setting, KeyBind, BindError
+import gevent
+
+
+class PickKeysButton(wx.Button):
+    def __init__(self, textctrl, *args, **kwargs):
+        self.textctrl = textctrl
+        super(PickKeysButton, self).__init__(*args, **kwargs)
+        self.Bind(wx.EVT_BUTTON, self.on_pressed)
+
+    def on_pressed(self, event):
+        event.Skip()
+        old_bg = self.textctrl.GetBackgroundColour()
+        self.Refresh()
+        gevent.sleep(.2)
+        cl = CombinationListener()
+        combination = None
+        while not combination:
+            combination = cl.check_pressed()
+            gevent.sleep(0)
+        while combination:
+            string = '+'.join(combination)
+            self.textctrl.Value = string
+            gevent.sleep(0)
+            combination = cl.check_pressed()
+        self.Refresh()
+
 
 class ObjectBindsPanel(scrolled.ScrolledPanel):
     def __init__(self, parent, manager, obj, *args, **kwargs):
@@ -8,20 +35,12 @@ class ObjectBindsPanel(scrolled.ScrolledPanel):
         self.obj = obj
         self.binds = []
         self.manager = manager
+        self.sizer = wx.FlexGridSizer(cols=6)
+        self.sizer.AddGrowableCol(1)
+        self.SetSizer(self.sizer)
         self.collect()
-        self.init()
         self.populate()
         self.SetupScrolling(False, True)
-
-
-    def init(self):
-        self.sizer = wx.FlexGridSizer(cols=5)
-        self.sizer.AddGrowableCol(1, 10)
-        self.SetSizer(self.sizer)
-        #self.box = wx.BoxSizer(wx.VERTICAL)
-        #self.sizer = wx.GridSizer(cols=2, hgap=0, vgap=0)
-        #self.box.Add(self.sizer)
-        #self.SetSizer(self.box)
 
     def collect(self):
         self.binds = list(self.obj.fetch_binds())
@@ -34,7 +53,7 @@ class ObjectBindsPanel(scrolled.ScrolledPanel):
             dlg = wx.MessageDialog(self, 'Malformed keys', 'oops', wx.OK | wx.ICON_ERROR)
             dlg.ShowModal()
             dlg.Destroy()
-            self.update()
+            self.update_keys()
             return
         old_bind = self.manager.key_manager.get_bind(keys)
         if old_bind:
@@ -45,11 +64,11 @@ class ObjectBindsPanel(scrolled.ScrolledPanel):
             if accept:
                 self.manager.key_manager.unbind(old_bind)
             else:
-                self.update()
+                self.update_keys()
                 return
         bind.set_keys(keys)
         bind.bind(self.manager)
-        self.update()
+        self.update_keys()
 
     def clear_bind(self, event, bind, text_box):
         event.Skip()
@@ -66,16 +85,15 @@ class ObjectBindsPanel(scrolled.ScrolledPanel):
             dlg = wx.MessageBox(self, 'Cannot unbind: bind does not exist', 'ouch', wx.OK | wx.ICON_ERROR)
             dlg.ShowModal()
             dlg.Destroy()
-        self.update()
+        self.update_keys()
 
-    def update(self):
+    def update_keys(self):
         for tb in self.tboxes:
             self.update_tb(*tb)
         self.Refresh()
 
     def update_tb(self, text_box, bind):
         keys = self.manager.key_manager.get_keys(bind)
-        print keys
         if keys:
             text_box.Value = keys
             text_box.SetBackgroundColour(wx.GREEN)
@@ -96,28 +114,24 @@ class ObjectBindsPanel(scrolled.ScrolledPanel):
             self.tboxes.append((text_box, bind))
             static = wx.StaticText(self, label=bind.name)
             button_set = wx.Button(self, label='Set')
+            button_pick = PickKeysButton(text_box, self, label='pick')
             button_clear = wx.Button(self, label='Clear')
             button_set.Bind(wx.EVT_BUTTON, lambda event, bind=bind, text_box=text_box: self.update_bind(event, bind, text_box.Value, text_box))
             button_clear.Bind(wx.EVT_BUTTON, lambda event, bind=bind, text_box=text_box: self.clear_bind(event, bind, text_box))
             button_set.SetMaxSize((40, button_set.GetMaxHeight()))
+            button_pick.SetMaxSize((40, button_pick.GetMaxHeight()))
             button_clear.SetMaxSize((40, button_clear.GetMaxHeight()))
             self.sizer.Add(static)
             self.sizer.Add(text_box, 10, wx.EXPAND)
             self.sizer.Add(button_set, 1, wx.ALIGN_RIGHT)
+            self.sizer.Add(button_pick, 1, wx.ALIGN_RIGHT)
             self.sizer.Add(button_clear, 1, wx.ALIGN_RIGHT)
-            #snd_sizer = wx.BoxSizer(wx.HORIZONTAL)
-            #self.sizer.Add(static, .5, wx.ALIGN_LEFT)
-            #snd_sizer.Add(text_box, 5, wx.EXPAND)
-            #snd_sizer.Add(button_set, 1)
-            #snd_sizer.Add(button_clear, 1)
-            #self.sizer.Add(snd_sizer, 1, wx.EXPAND)
             self.sizer.Add((10, 0), 1)
 
 
-
-class ScriptSettingsPanel(scrolled.ScrolledPanel):
+class ObjectSettingsPanel(scrolled.ScrolledPanel):
     def __init__(self, parent, obj, *args, **kwargs):
-        super(ScriptSettingsPanel, self).__init__(parent, *args, **kwargs)
+        super(ObjectSettingsPanel, self).__init__(parent, *args, **kwargs)
         self.obj = obj
         self.groups = {}
         self.notebook = wx.Notebook(self)
@@ -128,7 +142,7 @@ class ScriptSettingsPanel(scrolled.ScrolledPanel):
         self.populate()
         self.SetupScrolling(True, True)
 
-    def update(self):
+    def update_page_values(self):
         page = self.notebook.CurrentPage
         if not page:
             return
@@ -159,48 +173,34 @@ class ScriptSettingsPanel(scrolled.ScrolledPanel):
                 setting.update_wx()
                 group.sizer.Add(label, .5, wx.ALIGN_LEFT)
                 group.sizer.Add(control, 1, wx.EXPAND)
-                #group.sizer.Add((10, 0), 1, wx.ALIGN_RIGHT)
 
-        #for name, setting in self.settings.iteritems():
-        #    label = wx.StaticText(self, label=setting.name)
-        #    control = setting.init_wx(self)
-        #    setting.update_wx()
-        #    self.base_sizer.Add(label, .5, wx.ALIGN_LEFT)
-        #    #self.base_sizer.Add(control, 1, wx.ALIGN_RIGHT|wx.EXPAND)
-        #    #self.base_sizer.Add(control, 1, wx.EXPAND)
-        #    self.base_sizer.Add(control, 1, wx.EXPAND)
-        #    self.base_sizer.Add((10, 0), 1, wx.ALIGN_RIGHT)
-        ##self.base_sizer.Add((1,1), 100, wx.EXPAND)
 
-    def on_setting_update(self):
-        pass
-
-class ScriptPanel(wx.Panel):
+class ObjectPanel(wx.Panel):
     def __init__(self, parent, script, *args, **kwargs):
-        super(ScriptPanel, self).__init__(parent, *args, **kwargs)
+        super(ObjectPanel, self).__init__(parent, *args, **kwargs)
         self.manager = parent.manager
         self.script = script
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.notebook = wx.Notebook(self)
-        self.settings = ScriptSettingsPanel(self.notebook, self.script)
+        self.settings = ObjectSettingsPanel(self.notebook, self.script)
         self.binds = ObjectBindsPanel(self.notebook, self.manager, self.script)
         self.notebook.AddPage(self.settings, 'Settings')
         self.notebook.AddPage(self.binds, 'Hotkeys')
         self.sizer.Add(self.notebook, 1, wx.EXPAND)
         self.SetSizer(self.sizer)
 
-    def update(self):
-        self.settings.update()
-        self.binds.update()
+    def update_settings(self):
+        self.settings.update_page_values()
+        self.binds.update_keys()
 
-class SettingsPanel(wx.Panel):
+class ObjectsPanel(wx.Panel):
     def __init__(self, manager, *args, **kwargs):
         self.scripts = {}
         self.panels = {}
         self.current_script = None
         self.current_settings_panel = None
         self.manager = manager
-        super(SettingsPanel, self).__init__(*args, **kwargs)
+        super(ObjectsPanel, self).__init__(*args, **kwargs)
         self.init()
 
     def remove_current(self):
@@ -208,7 +208,6 @@ class SettingsPanel(wx.Panel):
             self.RemoveChild(self.current_settings_panel)
             self.sizer.Remove(self.current_settings_panel)
             self.Layout()
-
 
     def update_settings(self, event):
         event.Skip()
@@ -225,26 +224,25 @@ class SettingsPanel(wx.Panel):
         self.sizer.Add(self.scripts_list, 1, wx.EXPAND)
         if panel:
             self.sizer.Add(panel, 1, wx.EXPAND)
-            panel.update()
+            panel.update_settings()
             panel.Show()
         self.current_settings_panel = panel
         self.sizer.Layout()
 
     def update(self):
-        self.scripts = self.manager.scripts_loaded
+        self.scripts = self.manager.scripts.scripts
         self.current_script = None
         self.current_settings_panel = None
         self.scripts_list.SetItems(self.scripts.keys())
         for name, script in self.scripts.iteritems():
             if not name in self.panels:
 #                result = ScriptSettingsPanel(self, script)
-                result = ScriptPanel(self, script)
+                result = ObjectPanel(self, script)
                 result.Hide()
                 self.panels[name] = result
 
 
     def init(self):
-        #self.sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer = wx.FlexGridSizer(rows=1, cols=2)
         self.sizer.AddGrowableCol(1)
         self.sizer.AddGrowableRow(0)

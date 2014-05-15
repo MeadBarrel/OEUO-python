@@ -1,35 +1,21 @@
 import os
 from xml.etree import cElementTree as ElementTree
 from pyuo.manager.props import Setting, KeyBind
+import traceback
 import shutil
 
-class ScriptBase(object):
-    def __init__(self, manager):
-        """
-        :type manager manager
-        """
-        global mgr
-        global UO
-        mgr = manager
-        UO = mgr.UO
-        self.manager = manager
+
+class SettingsManagerError(Exception):
+    pass
+
+
+class SettingsManager(object):
+    def __init__(self, key_manager):
+        self.key_manager = key_manager
         self._binds = []
         self.__prepare_binds()
-        self.load_xml()
-        self.load(manager)
-
-    @classmethod
-    def name(cls):
-        if hasattr(cls, 'script_name'):
-            return cls.script_name
-        else:
-            return cls.__name__
-
-    def load(self, manager):
-        pass
-
-    def main(self):
-        pass
+        self._binds = []
+        self.__prepare_binds()
 
     def fetch_binds(self):
         for name in dir(self):
@@ -55,18 +41,16 @@ class ScriptBase(object):
             if isinstance(value, Setting):
                 yield(name, value)
 
-    def xml_path(self):
-        base, ext = os.path.splitext(self._path)
-        path, fbase = os.path.split(base)
-        return '%s/saved/%s.xml' % (path, fbase)
+#    def xml_path(self):
+#        base, ext = os.path.splitext(self._path)
+#        path, fbase = os.path.split(base)
+#        return '%s/saved/%s.xml' % (path, fbase)
 
-    def load_xml(self):
-        path = self.xml_path()
+    def load_xml(self, path):
         try:
             tree = ElementTree.parse(path)
         except:
-            #TODO: don't do this silently
-            return
+            raise SettingsManagerError("Could not parse '%s':%s" % (path, traceback.format_exc()))
 
         root = tree.getroot()
         settings = root.find('settings')
@@ -89,12 +73,11 @@ class ScriptBase(object):
             if not bind:
                 continue
             bind.set_keys(keys)
-            self.manager.key_manager.bind(bind)
+            self.key_manager.bind(bind)
 
 
 
     def save_xml(self, path=None):
-        path = self.xml_path()
         folder = os.path.split(path)[0]
         if not os.path.exists(folder):
             os.makedirs(folder)
@@ -121,3 +104,34 @@ class ScriptBase(object):
             if hasattr(attr, '_bind_deco'):
                 for bd in attr._bind_deco:
                     self._binds.append(KeyBind(attr, *bd))
+
+
+class ScriptBase(SettingsManager):
+    def __init__(self, manager):
+        """
+        :type manager manager
+        """
+        super(ScriptBase, self).__init__(manager.key_manager)
+        global mgr
+        global UO
+        mgr = manager
+        UO = mgr.UO
+        self.manager = manager
+        self.load(manager)
+
+    @classmethod
+    def name(cls):
+        if hasattr(cls, 'script_name'):
+            return cls.script_name
+        else:
+            return cls.__name__
+
+    def free(self):
+        pass
+
+    def load(self, manager):
+        pass
+
+    def main(self):
+        pass
+

@@ -299,7 +299,6 @@ class ItemSetting(Setting):
     def update_wx(self):
         print "UPDATE %s" % str(self.value)
         self.wx_label.LabelText = '%i (%s)' % tuple(self.value)
-        self.wx_control.Refresh()
 
     def serialize(self, element):
         element.set('item_id', str(self.value[0]))
@@ -319,9 +318,11 @@ class ItemSetting(Setting):
         self.wx_sizer = wx.FlexGridSizer(rows=1, cols=2)
         self.wx_sizer.AddGrowableCol(0)
         self.wx_label = wx.StaticText(self.wx_control)
+        self.wx_label.ForegroundColour = wx.GREEN
+        self.wx_label.BackgroundColour = wx.BLACK
         self.wx_pick_button = ItemSelectButton(self.wx_control, label='Pick')
         self.wx_pick_button.Bind(EVT_ITEM_SELECT, self.item_picked)
-        self.wx_sizer.Add(self.wx_label)
+        self.wx_sizer.Add(self.wx_label, 1, wx.EXPAND)
         self.wx_sizer.Add(self.wx_pick_button)
         self.wx_control.SetSizer(self.wx_sizer)
         return self.wx_control

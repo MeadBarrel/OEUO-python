@@ -1,6 +1,7 @@
 import win32api, win32con
 from itertools import imap
 from key_codes import codes
+import time
 import gevent
 
 class BindError(Exception):
@@ -13,6 +14,32 @@ def getkey_int(key_int):
 def getkey(key):
     key_int = codes[key]
     return getkey_int(key_int)
+
+keys_list = set(codes.keys())
+
+class CombinationListener(object):
+    """Helper class to help in defining key combinations"""
+
+    def __init__(self, release_time = .4):
+        self.release_time = release_time
+        self.pressed = {}
+
+    def check_pressed(self):
+        T = time.time()
+        pressed = filter(getkey, keys_list)
+        if not pressed:
+            result = self.pressed.keys()
+            self.pressed = {}
+            return result
+        for code in pressed:
+            self.pressed[code] = T
+        for code, value in self.pressed.items():
+            if value < T - self.release_time:
+                del self.pressed[code]
+        return self.pressed.keys()
+
+    def map_pressed(self):
+        return [codes.keys()[codes.values().index(code)] for code in self.check_pressed()]
 
 
 class KeyBinder(object):

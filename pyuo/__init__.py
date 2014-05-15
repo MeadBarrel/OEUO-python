@@ -1,6 +1,3 @@
-'''
-'''
+import os
 
-__author__ = 'Lai Tash'
-__email__ = 'lai.tash@gmail.com'
-__license__ = "GPL"
+app_folder = os.path.split(os.path.split(__file__)[0])[0]

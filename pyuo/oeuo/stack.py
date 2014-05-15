@@ -222,4 +222,7 @@ class Stack(BaseStack):
     def __len__(self):
         return self.GetTop()
 
+    def __del__(self):
+        self.Close()
+
 
