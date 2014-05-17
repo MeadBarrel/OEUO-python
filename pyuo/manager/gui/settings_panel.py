@@ -12,6 +12,7 @@ class PickKeysButton(wx.Button):
         self.Bind(wx.EVT_BUTTON, self.on_pressed)
 
     def on_pressed(self, event):
+        #todo fix freezes
         event.Skip()
         old_bg = self.textctrl.GetBackgroundColour()
         self.Refresh()

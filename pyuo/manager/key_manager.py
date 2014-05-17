@@ -83,7 +83,6 @@ class KeyBinder(object):
 
     def get_keys(self, bind):
         for key, bind_ in self.binds.iteritems():
-            print bind_, bind
             if bind_ is bind:
                 return key
         return None

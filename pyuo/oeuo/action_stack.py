@@ -9,6 +9,8 @@ class ActionStackError(Exception):
 
 class _ActionStack(object):
     #stack_delay = FloatSetting('Action delay', default=.6)
+    #todo: make this float setting
+    stack_delay = .6
 
     def __init__(self, UO):
         self.UO = UO
@@ -40,6 +42,7 @@ class _ActionStack(object):
         action = self.stack.pop()
         index = action[0]
         result = action[1](*action[2], **action[3])
+        print "POP %s" % str(action[1])
         assert index not in self.invoked
         self.invoked[index] = result
         return True
@@ -55,6 +58,7 @@ class _ActionStack(object):
         """Push the action and wait for result. Return the result.
         :type action callable
         """
+        print "PUSH %s" % str(action)
         index = self.push(action, args, kwargs)
         while not index in self.invoked:
             gevent.sleep(0)

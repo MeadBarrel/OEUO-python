@@ -77,7 +77,7 @@ class Setting(object):
     __metaclass__ = ABCMeta
     _required_type = None
     _default = 0
-    __value = None
+    _value = None
     wx_control = None
 
     def __init__(self, name, default=None, on_change=None, group=None, priority=0):
@@ -89,20 +89,19 @@ class Setting(object):
         self.priority = priority
         self.__on_change = on_change
 
-
     @property
     def name(self):
         return self.__name
 
     @property
     def value(self):
-        if self.__value is None:
+        if self._value is None:
             return self._default
-        return self.__value
+        return self._value
 
     @value.setter
     def value(self, value):
-        self.__value = value
+        self._value = value
 
     def serialize(self, element):
         return str(self.value)
@@ -119,8 +118,10 @@ class Setting(object):
     def __set__(self, instance, value):
         if not self.check_type(value):
             raise SettingError()
-        self.__value = value
-        print "Set to %s and now it is %s" %(self.__value, self.value)
+        if self._value == value:
+            return
+        self._value = value
+        print "Set to %s and now it is %s" %(self._value, self.value)
         if self.__on_change:
             self.__on_change()
         if self.wx_control:
@@ -135,6 +136,7 @@ class Setting(object):
 
     def update_wx(self):
         self.wx_control.Value = str(self.value)
+        self.wx_control.Refresh()
 
     def update_from_wx(self, event):
         try:
@@ -201,6 +203,9 @@ class BoolSetting(Setting):
         self.wx_control = wx.CheckBox(parent)
         self.wx_control.Bind(wx.EVT_CHECKBOX, self.update_from_wx)
         return self.wx_control
+
+    def unserialize(self, value):
+        return value=="True"
 
     def update_wx(self):
         self.wx_control.Value = self.value
@@ -285,6 +290,9 @@ class ItemSetting(Setting):
     _required_type = list
     _default = [0,'unknown']
 
+    def __get__(self, instance, owner):
+        return super(ItemSetting, self).__get__(instance, owner)[0]
+
     def item_picked(self, event):
         event.Skip()
         id_ = event.target.id_
@@ -327,47 +335,44 @@ class ItemSetting(Setting):
         self.wx_control.SetSizer(self.wx_sizer)
         return self.wx_control
 
-class ItemKindListSetting(Setting):
-    _required_type = list
-    _default = []
+
+class ItemObjListSetting(Setting):
+    _required_type = dict
+    _default = {}
+
+    def __set__(self, instance, value):
+        if not self.check_type(value):
+            raise SettingError()
+        if self._value and self._value.keys() == value.keys():
+            return
+        super(ItemObjListSetting, self).__set__(instance, value)
 
     def item_picked(self, event):
         event.Skip()
-        id = event.target.id_
-        item = get_by_id(id)
+        id_ = event.target.id_
+        if id_ in self.value:
+            return
+        item = get_by_id(id_)
         if item is not None:
-            if self.find_in_list(item.type_):
-                return
             name = item.name
-            type_ = item.type_
-            self.value.append([type_, name])
-            self.wx_list.Append([str(type_), name])
-
-    def find_in_list(self, value):
-        print "DSADSA", value
-        return value in [i[0] for i in self.iter_list()]
-
-    def iter_list(self):
-        for idx in xrange(self.wx_list.GetItemCount()):
-            value = int(self.wx_list.GetItem(idx, 0).GetText())
-            name = self.wx_list.GetItem(idx, 1).GetText()
-            yield value, name
+            self.value[id_] = name
+            self.wx_list.Append([str(id_), name])
 
     def serialize(self, element):
-        for item in self.value:
+        for item, name in self.value.iteritems():
             subel = ElementTree.SubElement(element, 'item')
-            subel.set('value', str(item[0]))
-            subel.set('name', str(item[1]))
+            subel.set('value', str(item))
+            subel.set('name', str(name))
 
     def unserialize(self, value):
         return None
 
     def parse_xml(self, element):
-        result = []
+        result = {}
         for subel in element.findall('item'):
             value = subel.get('value')
             name = subel.get('name')
-            result.append([int(value), name])
+            result[int(value)] = name
         return result
 
     def remove_button_pressed(self, event):
@@ -380,7 +385,7 @@ class ItemKindListSetting(Setting):
             index = self.wx_list.GetNextSelected(index)
             selection.append(index)
         for selected in selection:
-            self.value.pop(selected)
+            self.value.pop(int(self.wx_list.GetItem(selected, 0).GetText()))
             self.wx_list.DeleteItem(selected)
 
     def item_selected(self, event):
@@ -391,18 +396,19 @@ class ItemKindListSetting(Setting):
 
     def update_wx(self):
         self.wx_list.ClearAll()
-        self.wx_list.InsertColumn(0, 'type', width=100)
+        self.wx_list.InsertColumn(0, 'id', width=100)
         self.wx_list.InsertColumn(1, 'name', wx.LIST_FORMAT_RIGHT)
-        for value, name in self.value:
+        for value, name in self.value.iteritems():
             self.wx_list.Append([str(value), name])
+        self.wx_control.Refresh()
 
     def init_wx(self, parent):
-        super(ItemKindListSetting, self).init_wx(parent)
+        super(ItemObjListSetting, self).init_wx(parent)
         self.wx_control = wx.Panel(parent)
         self.wx_sizer = wx.FlexGridSizer(cols=1, rows=2)
         self.wx_sizer.AddGrowableCol(0)
         self.wx_list = wx.ListCtrl(self.wx_control, style=wx.LC_REPORT)
-        self.wx_list.InsertColumn(0, 'type', width=100)
+        self.wx_list.InsertColumn(0, 'id', width=100)
         self.wx_list.InsertColumn(1, 'name', wx.LIST_FORMAT_RIGHT)
         self.wx_list.SetMinSize((self.wx_list.MinWidth, 70))
         self.wx_list.Bind(wx.EVT_LISTBOX, self.item_selected)
@@ -418,6 +424,28 @@ class ItemKindListSetting(Setting):
         self.wx_remove_button.Bind(wx.EVT_BUTTON, self.remove_button_pressed)
         return self.wx_control
 
+
+class ItemKindListSetting(ItemObjListSetting):
+
+    def item_picked(self, event):
+        event.Skip()
+        id = event.target.id_
+        item = get_by_id(id)
+        if item is not None:
+            if item.type_ in self.value:
+                return
+            name = item.name
+            type_ = item.type_
+            self.value[type_] = name
+            self.wx_list.Append([str(type_), name])
+
+    def update_wx(self):
+        self.wx_list.ClearAll()
+        self.wx_list.InsertColumn(0, 'type', width=100)
+        self.wx_list.InsertColumn(1, 'name', wx.LIST_FORMAT_RIGHT)
+        for value, name in self.value.iteritems():
+            self.wx_list.Append([str(value), name])
+        self.wx_control.Refresh()
 
 class StrListSetting(Setting):
     _required_type = list

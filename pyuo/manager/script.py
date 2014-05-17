@@ -41,6 +41,10 @@ class SettingsManager(object):
             if isinstance(value, Setting):
                 yield(name, value)
 
+    @classmethod
+    def get_setting(cls, name):
+        return vars(cls)[name]
+
 #    def xml_path(self):
 #        base, ext = os.path.splitext(self._path)
 #        path, fbase = os.path.split(base)
@@ -62,7 +66,7 @@ class SettingsManager(object):
                     continue
                 if 'value' in setting.keys():
                     value = setting.get('value')
-                    unserialized = prop_objects[name].unserialize(setting.get('value'))
+                    unserialized = prop_objects[name].unserialize(value)
                 else:
                     unserialized = prop_objects[name].parse_xml(setting)
                 setattr(self, name, unserialized)

@@ -22,6 +22,7 @@ import time
 import win32gui
 
 class App(wx.App):
+    """A simple wx.App replacement to work as a greenlet"""
     def MainLoop(self):
         self.keepGoing = True
         evtloop = wx.EventLoop()
@@ -188,6 +189,7 @@ class _Manager(object):
     def __init__(self, welcome, folder):
         self.UO = UO
         self.AS = AS
+        self.AS_task = None
         self.welcome = welcome
         self.gui = ManagerGUI(self)
         self.key_manager = KeyBinder(self)
@@ -236,6 +238,7 @@ class _Manager(object):
             self.save_profile(self.profile)
             self.scripts.stop_all()
             self.scripts.free_all()
+            self.AS_task.kill()
             self.keep_going = False
         except:
             self.log_error(traceback.format_exc())
@@ -244,6 +247,7 @@ class _Manager(object):
         try:
             self.scripts.start_all()
             self.gui.main_loop()
+            self.AS_task = gevent.spawn(self.AS.main_loop)
             self.main_loop_task = gevent.spawn(self.main_loop)
         except:
             self.log_error(traceback.format_exc())

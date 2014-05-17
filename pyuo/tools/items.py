@@ -8,7 +8,6 @@ import gevent
 
 class ItemProperty(object):
     def __init__(self, name, value=1.0, min_=None, max_=None):
-        print "ADDED %s %s" % (name, value)
         self.name = name
         self.value = value
         self.min_ = min_
@@ -39,7 +38,6 @@ class ItemProperties(object):
             result += '%s: %s' % (name, str(property.value))
 
     def parse_property(self, property_string):
-        print "TRY PARSE '%s'" % property_string
         match_name = self.re_name.match(property_string)
         if not match_name:
             return ItemProperty(property_string)
@@ -138,6 +136,8 @@ class Item(object):
         """
         result = []
         current = ItemFilter().with_id(self.cont_id).first()
+        if current is None:
+            return result
         result.append(current)
         for i in xrange(depth):
             if current.cont_id is None:
