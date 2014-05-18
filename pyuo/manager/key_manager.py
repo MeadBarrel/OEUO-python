@@ -1,5 +1,5 @@
 import win32api, win32con
-from itertools import imap
+from itertools import imap, ifilter
 from key_codes import codes
 import time
 import gevent
@@ -50,6 +50,7 @@ class KeyBinder(object):
         self.keys = {key: None for key in self.keys_list}
         self.binds = {}
         self.paused = False
+        self.last_combination = None
 
     def pause(self):
         self.paused = True
@@ -58,6 +59,8 @@ class KeyBinder(object):
         self.paused = False
 
     def uniform(self, keys_string):
+        if not keys_string:
+            return ''
         keys = [key.strip() for key in keys_string.split('+')]
         for key in keys:
             if key not in self.keys_list:
@@ -90,7 +93,11 @@ class KeyBinder(object):
     def execute(self):
         if self.paused:
             return
+        pressed = self.uniform('+'.join(ifilter(getkey, keys_list)))
+        if pressed == self.last_combination:
+            return
         for (keys, bind) in self.binds.iteritems():
-            keys = keys.split('+')
-            if all(imap(getkey, keys)):
-                gevent.spawn(bind.__call__)
+            if keys == pressed:
+                self.manager.spawn(bind.__call__)
+        self.last_combination = pressed
+

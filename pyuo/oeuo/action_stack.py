@@ -18,7 +18,7 @@ class _ActionStack(object):
         self.invoked = {}
         self.index = 0
 
-    def push(self, action, args, kwargs):
+    def push(self, timeout, action, args, kwargs):
         """Push an action into stack and return it's unique id
 
         :type action callable
@@ -27,7 +27,7 @@ class _ActionStack(object):
         :rtype int
         """
         index = self.index
-        self.stack.append((index, action, args, kwargs))
+        self.stack.append((index, timeout, action, args, kwargs))
         self.index += 1
         return index
 
@@ -38,28 +38,30 @@ class _ActionStack(object):
         :rtype boolean
         """
         if not self.stack:
-            return False
+            return None
         action = self.stack.pop()
         index = action[0]
-        result = action[1](*action[2], **action[3])
-        print "POP %s" % str(action[1])
+        timeout = action[1]
+        result = action[2](*action[3], **action[4])
+        print "POP %s" % str(action[2])
         assert index not in self.invoked
         self.invoked[index] = result
-        return True
+        return timeout
 
     def main_loop(self):
         while True:
-            if self.invoke_next():
-                gevent.sleep(self.stack_delay)
+            to = self.invoke_next()
+            if to is not None:
+                gevent.sleep(to)
             else:
                 gevent.sleep(0)
 
-    def push_action(self, action, *args, **kwargs):
+    def push_action(self, timeout, action, *args, **kwargs):
         """Push the action and wait for result. Return the result.
         :type action callable
         """
         print "PUSH %s" % str(action)
-        index = self.push(action, args, kwargs)
+        index = self.push(timeout, action, args, kwargs)
         while not index in self.invoked:
             gevent.sleep(0)
         result = self.invoked[index]
@@ -68,23 +70,23 @@ class _ActionStack(object):
 
 
 class ActionStack(_ActionStack):
-    def Macro(self, param_1, param_2=0, string=''):
-        return self.push_action(self.UO.Macro, param_1, param_2, string)
+    def Macro(self, param_1, param_2=0, string='', timeout=.6):
+        return self.push_action(timeout, self.UO.Macro, param_1, param_2, string)
 
     def Drag(self, nid, namnt=None):
-        return self.push_action(self.UO.Drag, nid, namnt)
+        return self.push_action(.6, self.UO.Drag, nid, namnt)
 
     def DropC(self, contid, pos=None):
-        return self.push_action(self.UO.DropC, contid, pos)
+        return self.push_action(.3, self.UO.DropC, contid, pos)
 
     def DropG(self, x, y, z=None):
-        return self.push_action(self.UO.DropG, x, y, z)
+        return self.push_action(.3, self.UO.DropG, x, y, z)
 
     def DropPD(self):
-        return self.push_action(self.UO.DropPD)
+        return self.push_action(.3, self.UO.DropPD)
 
     def Equip(self, *nids):
-        return self.push_action(self.UO.Equip, *nids)
+        return self.push_action(.6, self.UO.Equip, *nids)
 
     def CliDrag(self, nid):
-        return self.push_action(self.UO.CliDrag, nid)
+        return self.push_action(.6, self.UO.CliDrag, nid)

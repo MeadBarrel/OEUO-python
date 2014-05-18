@@ -15,6 +15,7 @@ from .script import ScriptBase, SettingsManager, SettingsManagerError
 import os
 import wx
 import gevent
+from gevent.pool import Group
 import traceback
 from .gui.gui import GUIFrame
 from .props import *
@@ -46,10 +47,14 @@ class ManagerSettings(SettingsManager):
         super(ManagerSettings, self).__init__(key_manager)
         self.manager = manager
 
+
     cpu_usage_limit_delay = FloatSetting('Limit cpu usage delay', default=.001)
     main_loop_delay = FloatSetting('Main loop delay', default=0)
     client_window_flag = StringSetting('Client window title flag', default='Ultima Online')
     no_input_outside_client = BoolSetting('No input outside client', default=True)
+    errors_to_client = BoolSetting('Notify errors in client', group='Debugging', priority=0)
+    do_debug = BoolSetting('Debug (requires restart)', default=True, group='Debugging', priority=1)
+    debug_show_messages = BoolSetting("Show debug messages", default=True, group='Debugging', relation=do_debug, priority=2)
 
 class ScriptsManager(object):
     def __init__(self, manager):
@@ -61,7 +66,6 @@ class ScriptsManager(object):
         self.tasks = {}
 
     def load_profile(self, profile):
-        self.stop_all()
         self.free_all()
         self.load_scripts(profile)
         self.load_scripts_settings(profile)
@@ -132,23 +136,8 @@ class ScriptsManager(object):
     def start_script(self, script_name):
         if not script_name in self.scripts:
             raise ScriptsManagerError('%s not in scripts' % script_name)
-        if script_name in self.tasks:
-            raise ScriptsManagerError('%s is already running' % script_name)
         self.manager.log_info('Starting %s' % script_name)
-        self.tasks[script_name] = gevent.spawn(self.scripts[script_name].main)
-
-    def stop_script(self, script_name):
-        if not script_name in self.scripts:
-            raise ScriptsManagerError('%s not in scripts' % script_name)
-        if not script_name in self.tasks:
-            raise ScriptsManagerError('%s is not running' % script_name)
-        self.manager.log_info('Stopping %s' % script_name)
-        self.tasks[script_name].kill()
-        del self.tasks[script_name]
-
-    def stop_all(self):
-        for script_name in self.scripts:
-            self.stop_script(script_name)
+        self.manager.spawn(self.scripts[script_name].main)
 
     def start_all(self):
         self.manager.log_info('Starting scripts')
@@ -174,8 +163,6 @@ class ManagerGUI(object):
     def hide(self):
         self.gui.Hide()
         self.gui.Destroy()
-        #if self.app.keepGoing:
-        #    self.app.keepGoing = False
 
     def close(self):
         if self.app.keepGoing:
@@ -184,6 +171,7 @@ class ManagerGUI(object):
     def update(self):
         pass
         #self.gui.update()
+
 
 class _Manager(object):
     def __init__(self, welcome, folder):
@@ -198,6 +186,34 @@ class _Manager(object):
         self.main_loop_task = None
         self.keep_going = False
         self.exec_result = -1
+        self.tasks = Group()
+        self.profiled = []
+
+    def sleep(self, n):
+        """
+        replaced in profiler
+        """
+        gevent.sleep(n)
+
+    def func_wrap(self, func, *args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception as e:
+            self.log_exception(e)
+
+    def spawn(self, func, *args, **kwargs):
+        task = gevent.spawn(self.func_wrap, func, *args, **kwargs)
+        self.tasks.add(task)
+
+    def stop_all_tasks(self):
+        self.tasks.kill()
+
+    def add_profiled(self, other):
+        self.profiled.append(other)
+
+    def show_profiled(self):
+        for profiled in self.profiled:
+            print profiled.class_name, profiled.func.__name__, profiled.calls, profiled.clock_total
 
     def client_has_focus(self):
         wt = win32gui.GetWindowText(win32gui.GetForegroundWindow())
@@ -236,10 +252,11 @@ class _Manager(object):
     def stop(self):
         try:
             self.save_profile(self.profile)
-            self.scripts.stop_all()
+            self.stop_all_tasks()
             self.scripts.free_all()
             self.AS_task.kill()
             self.keep_going = False
+            self.show_profiled()
         except:
             self.log_error(traceback.format_exc())
 
@@ -278,14 +295,26 @@ class _Manager(object):
         except:
             self.log_error('Could not save global settings, exception:\n %s' % traceback.format_exc())
 
+    def get_time_string(self):
+        return time.ctime(time.time())[11:-5]
+
+    def log_exception(self, exception):
+        if self.settings.errors_to_client:
+            UO.SysMessage('Error: %s' % str(exception))
+        print "\nException: %s\n\n" % traceback.format_exc()
+
     def log_error(self, message):
-        print 'ERROR:\n%s\n\n' % message
+        print '\n[%s]ERROR:\n%s\n\n' % (self.get_time_string(), message)
 
     def log_warning(self, message):
-        print 'WARNING: %s\n\n' % message
+        print 'WARNING: %s\n' % message
 
     def log_info(self, message):
-        print 'INFO: %s\n\n' % message
+        print 'INFO: %s\n' % message
+
+    def log_debug(self, message):
+        if self.settings.debug_show_messages:
+            print '[%s]DEBUG: %s\n' % (self.get_time_string(), message)
 
     def get_profile_path(self, profile):
         return os.path.join(self.folder, 'profiles', profile)

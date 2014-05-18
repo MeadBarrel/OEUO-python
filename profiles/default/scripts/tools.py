@@ -18,12 +18,6 @@ class ToolsScript(ScriptBase):
     def do_hide_item(self, id_):
         UO.HideItem(id_)
 
-    @method_bind('usetype')
-    def usetype(self):
-        for c in '- USETYPE 0xFF':
-            UO.Key(c)
-            time.sleep(.05)
-
     def update(self):
         for item_id in self.hide_item_list:
             gevent.sleep(self.hide_delay)
@@ -46,6 +40,7 @@ class ToolsScript(ScriptBase):
             self.hide_item_list[id_] = name
 
     def main(self):
+        return
         while True:
             if self.keep_hiding:
                 self.update()

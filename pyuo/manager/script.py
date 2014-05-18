@@ -1,7 +1,9 @@
 import os
 from xml.etree import cElementTree as ElementTree
 from pyuo.manager.props import Setting, KeyBind
+from inspect import isfunction
 import traceback
+from .profiler import ProfiledFunc
 import shutil
 
 
@@ -121,7 +123,18 @@ class ScriptBase(SettingsManager):
         mgr = manager
         UO = mgr.UO
         self.manager = manager
+        if self.manager.settings.do_debug:
+            self.wrap_methods()
         self.load(manager)
+
+    def wrap_methods(self):
+        for name, method in vars(self.__class__).iteritems():
+            if name.find('__') == 0 or name in dir(ScriptBase) or not isfunction(method) :
+                continue
+            func = getattr(self, name)
+            pf = ProfiledFunc(func, self.manager, self.__class__.__name__)
+            self.manager.add_profiled(pf)
+            setattr(self, name, pf)
 
     @classmethod
     def name(cls):

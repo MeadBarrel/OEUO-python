@@ -62,17 +62,6 @@ class SettingError(Exception):
     pass
 
 
-class SettingValue(object):
-    def __init__(self, setting, value):
-        self.value = value
-        self.setting = setting
-
-    def __getattr__(self, item):
-        if hasattr(self.value, item):
-            return getattr(self.value, item)
-        else:
-            return getattr(self.setting, item)
-
 class Setting(object):
     __metaclass__ = ABCMeta
     _required_type = None
@@ -80,14 +69,30 @@ class Setting(object):
     _value = None
     wx_control = None
 
-    def __init__(self, name, default=None, on_change=None, group=None, priority=0):
+    def __init__(self, name, default=None, on_change=None, group=None, priority=0, relation=None):
         self.__name = name
         self._default = default if default is not None else self._default
         self.group = group or 'Base'
         if not isinstance(self.group, str):
             raise SettingError('group must be string')
         self.priority = priority
-        self.__on_change = on_change
+        self.on_change = on_change
+        self.relation = relation
+        self.relations = []
+        if relation:
+            relation.add_relation(self)
+
+    def change(self):
+        if self.on_change is not None:
+            self.on_change(self.value)
+        if self.relations:
+            self.update_relations()
+
+    def update_relations(self):
+        pass
+
+    def add_relation(self, other):
+        self.relations.append(other)
 
     @property
     def name(self):
@@ -102,6 +107,7 @@ class Setting(object):
     @value.setter
     def value(self, value):
         self._value = value
+        self.change()
 
     def serialize(self, element):
         return str(self.value)
@@ -122,8 +128,8 @@ class Setting(object):
             return
         self._value = value
         print "Set to %s and now it is %s" %(self._value, self.value)
-        if self.__on_change:
-            self.__on_change()
+        if self.on_change:
+            self.on_change()
         if self.wx_control:
             self.update_wx()
 
@@ -144,6 +150,11 @@ class Setting(object):
         except SettingError:
             return
 
+    def enable(self):
+        self.wx_control.Enable()
+
+    def disable(self):
+        self.wx_control.Disable()
 
 class IntSetting(Setting):
     _required_type = int
@@ -184,6 +195,12 @@ class FloatSetting(Setting):
         self.wx_control.Bind(wx.EVT_TEXT, self.update_from_wx)
         return self.wx_control
 
+    def disable(self):
+        self.wx_control.Disable()
+
+    def enable(self):
+        self.wx_control.Enable()
+
 class StringSetting(Setting):
     _required_type = str
     _default = ''
@@ -194,9 +211,20 @@ class StringSetting(Setting):
         self.wx_control.Bind(wx.EVT_TEXT, self.update_from_wx)
         return self.wx_control
 
+    def disable_wx(self):
+        self.wx_control.Disable()
+
+    def enable_wx(self):
+        self.wx_control.Enable()
+
+
 class BoolSetting(Setting):
     _required_type = bool
     _default = False
+
+    def __init__(self, *args, **kwargs):
+        super(BoolSetting, self).__init__(*args, **kwargs)
+        self.relations = []
 
     def init_wx(self, parent):
         super(BoolSetting, self).init_wx(parent)
@@ -209,6 +237,26 @@ class BoolSetting(Setting):
 
     def update_wx(self):
         self.wx_control.Value = self.value
+        self.update_relations()
+
+    def disable(self):
+        if self.wx_control:
+            self.wx_control.Disable()
+
+    def enable(self):
+        if self.wx_control:
+            self.wx_control.Enable()
+
+    def update_relations(self):
+        for relation in self.relations:
+            relation.enable() if self.value else relation.disable()
+
+    def update_from_wx(self, event):
+        self.value = self._required_type(self.wx_control.Value)
+        if self.value:
+            self.update_relations()
+
+
 
 class IntListSetting(Setting):
     _required_type = list
@@ -250,6 +298,7 @@ class IntListSetting(Setting):
         self.wx_list.Append(self.wx_input.Value)
         self.wx_input.Value = ''
         self.value.append(value)
+        self.change()
 
     def remove_button_pressed(self, event):
         selection = self.wx_list.GetSelection()
@@ -357,6 +406,7 @@ class ItemObjListSetting(Setting):
             name = item.name
             self.value[id_] = name
             self.wx_list.Append([str(id_), name])
+            self.change()
 
     def serialize(self, element):
         for item, name in self.value.iteritems():
@@ -438,6 +488,7 @@ class ItemKindListSetting(ItemObjListSetting):
             type_ = item.type_
             self.value[type_] = name
             self.wx_list.Append([str(type_), name])
+            self.change()
 
     def update_wx(self):
         self.wx_list.ClearAll()
@@ -456,6 +507,7 @@ class StrListSetting(Setting):
         value = self.wx_input.Value
         self.wx_list.Append(self.wx_input.Value)
         self.value.append(value)
+        self.change()
 
     def serialize(self, element):
         for item in self.value:

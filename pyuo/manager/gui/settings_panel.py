@@ -6,13 +6,14 @@ import gevent
 
 
 class PickKeysButton(wx.Button):
+    """Button widget, requesting a key combination when pressed. Binds to TextCtrl to show the combination pressed"""
+
     def __init__(self, textctrl, *args, **kwargs):
         self.textctrl = textctrl
         super(PickKeysButton, self).__init__(*args, **kwargs)
         self.Bind(wx.EVT_BUTTON, self.on_pressed)
 
     def on_pressed(self, event):
-        #todo fix freezes
         event.Skip()
         old_bg = self.textctrl.GetBackgroundColour()
         self.Refresh()
@@ -31,7 +32,13 @@ class PickKeysButton(wx.Button):
 
 
 class ObjectBindsPanel(scrolled.ScrolledPanel):
+    """SettingsManager key binds panel"""
+
     def __init__(self, parent, manager, obj, *args, **kwargs):
+        """
+        :rtype manager _Manager
+        :rtype obj SettingsManager
+        """
         super(ObjectBindsPanel, self).__init__(parent, *args, **kwargs)
         self.obj = obj
         self.binds = []
@@ -44,9 +51,12 @@ class ObjectBindsPanel(scrolled.ScrolledPanel):
         self.SetupScrolling(False, True)
 
     def collect(self):
+        """Collect key binds from settings manager"""
         self.binds = list(self.obj.fetch_binds())
 
-    def update_bind(self, event, bind, keys, text_box):
+    def set_bind(self, event, bind, keys, text_box):
+        """Try to set a key bind. Show error dialog on bad formed combination, or yes/no warning if there's already
+        a bind for that combination"""
         event.Skip()
         try:
             keys = self.manager.key_manager.uniform(keys)
@@ -117,7 +127,7 @@ class ObjectBindsPanel(scrolled.ScrolledPanel):
             button_set = wx.Button(self, label='Set')
             button_pick = PickKeysButton(text_box, self, label='pick')
             button_clear = wx.Button(self, label='Clear')
-            button_set.Bind(wx.EVT_BUTTON, lambda event, bind=bind, text_box=text_box: self.update_bind(event, bind, text_box.Value, text_box))
+            button_set.Bind(wx.EVT_BUTTON, lambda event, bind=bind, text_box=text_box: self.set_bind(event, bind, text_box.Value, text_box))
             button_clear.Bind(wx.EVT_BUTTON, lambda event, bind=bind, text_box=text_box: self.clear_bind(event, bind, text_box))
             button_set.SetMaxSize((40, button_set.GetMaxHeight()))
             button_pick.SetMaxSize((40, button_pick.GetMaxHeight()))
