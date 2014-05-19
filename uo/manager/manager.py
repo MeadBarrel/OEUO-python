@@ -9,7 +9,8 @@ __author__ = 'Lai Tash'
 __email__ = 'lai.tash@gmail.com'
 __license__ = "GPL"
 
-from ..oeuo import UO, AS
+import uo
+UO, AS = uo.UO, uo.AS
 from threading import Thread
 from .props import KeyBind
 from .key_manager import KeyBinder, CombinationListener
@@ -174,8 +175,9 @@ class ManagerGUI(object):
 
 class _Manager(object):
     def __init__(self, welcome, folder):
-        self.UO = UO
-        self.AS = AS
+        uo.manager = self
+        self.UO = uo.UO
+        self.AS = uo.AS
         self.AS_task = None
         self.welcome = welcome
         self.gui = ManagerGUI(self)

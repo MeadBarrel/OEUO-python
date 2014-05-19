@@ -4,6 +4,7 @@ from uo.manager.props import *
 from uo.tools.items import get_by_id
 from uo.tools.extensions import request_target
 from uo.tools.items import *
+from uo import manager
 import wx
 
 class DebugToolsScript(ScriptBase):
@@ -14,6 +15,11 @@ class DebugToolsScript(ScriptBase):
 
     def t2(self):
         UO.SysMessage('RELEASED')
+
+    def main(self):
+        while True:
+            UO.SysMessage(str(manager))
+            manager.sleep(1)
 
     def load(self, manager):
         b = KeyBind(self.t1, self.t2)
