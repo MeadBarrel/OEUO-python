@@ -1,4 +1,4 @@
-from pyuo.oeuo import UO, AS
+from uo.oeuo import UO, AS
 
 def use_item(id_):
     UO.LObjectID = id_

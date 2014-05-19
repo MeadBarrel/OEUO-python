@@ -1,8 +1,8 @@
 """PyOEUO script manager"""
 from contextlib import contextmanager
 from wx import Timer, EVT_TIMER
-from pyuo import app_folder
-from pyuo.manager.gui.gui import WelcomeFrame
+from uo import app_folder
+from uo.manager.gui.gui import WelcomeFrame
 
 
 __author__ = 'Lai Tash'

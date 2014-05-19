@@ -1,9 +1,9 @@
-from pyuo.oeuo import UO, AS
-from pyuo.manager.script import ScriptBase
-from pyuo.manager.props import *
-from pyuo.tools.items import get_by_id
-from pyuo.tools.extensions import request_target
-from pyuo.tools.items import *
+from uo.oeuo import UO, AS
+from uo.manager.script import ScriptBase
+from uo.manager.props import *
+from uo.tools.items import get_by_id
+from uo.tools.extensions import request_target
+from uo.tools.items import *
 import wx
 
 class DebugToolsScript(ScriptBase):

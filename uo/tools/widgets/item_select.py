@@ -1,7 +1,7 @@
 import wx
 import wx.lib.newevent
-from pyuo.tools.extensions import request_target
-from pyuo.tools.items import Item
+from uo.tools.extensions import request_target
+from uo.tools.items import Item
 
 ItemSelectEvent, EVT_ITEM_SELECT = wx.lib.newevent.NewEvent()
 

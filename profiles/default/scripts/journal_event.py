@@ -1,4 +1,4 @@
-from pyuo.manager.script import ScriptBase
+from uo.manager.script import ScriptBase
 import gevent
 import re
 

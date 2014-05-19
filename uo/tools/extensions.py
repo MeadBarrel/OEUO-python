@@ -1,5 +1,5 @@
 import time
-from pyuo.oeuo import UO, AS
+from uo.oeuo import UO, AS
 from .macro import use_item
 import gevent
 

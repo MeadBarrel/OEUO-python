@@ -1,7 +1,7 @@
-from pyuo.manager.props import *
-from pyuo.manager.script import ScriptBase
-from pyuo.oeuo import UO, AS
-from pyuo.tools.items import get_items, iter_items_async
+from uo.manager.props import *
+from uo.manager.script import ScriptBase
+from uo.oeuo import UO, AS
+from uo.tools.items import get_items, iter_items_async
 from itertools import ifilter
 import gevent
 

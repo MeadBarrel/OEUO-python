@@ -1,6 +1,6 @@
 import wx
 import gevent
-from pyuo.manager.script import ScriptBase
+from uo.manager.script import ScriptBase
 
 WIDTH = 100
 HEIGHT = 20

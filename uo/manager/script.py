@@ -1,6 +1,6 @@
 import os
 from xml.etree import cElementTree as ElementTree
-from pyuo.manager.props import Setting, KeyBind
+from uo.manager.props import Setting, KeyBind
 from inspect import isfunction
 import traceback
 from .profiler import ProfiledFunc

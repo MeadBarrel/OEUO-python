@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from xml.etree import cElementTree as ElementTree
-from pyuo.tools.widgets.item_select import ItemSelectButton, EVT_ITEM_SELECT
-from pyuo.tools.items import get_by_id
+from uo.tools.widgets.item_select import ItemSelectButton, EVT_ITEM_SELECT
+from uo.tools.items import get_by_id
 import wx
 
 from .key_manager import BindError

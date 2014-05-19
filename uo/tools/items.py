@@ -1,4 +1,4 @@
-from pyuo.oeuo import UO, AS
+from uo.oeuo import UO, AS
 from .extensions import use_item, use_on
 from .itertools import imap, ifilter
 import itertools

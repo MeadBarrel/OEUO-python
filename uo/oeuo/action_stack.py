@@ -1,5 +1,5 @@
 from collections import deque
-#from pyuo.manager.props import FloatSetting
+#from uo.manager.props import FloatSetting
 import gevent
 
 

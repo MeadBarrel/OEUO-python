@@ -1,7 +1,7 @@
-from pyuo.manager.script import ScriptBase
-from pyuo.oeuo import UO
-from pyuo.tools.items import ItemFilter
-from pyuo.manager.props import *
+from uo.manager.script import ScriptBase
+from uo.oeuo import UO
+from uo.tools.items import ItemFilter
+from uo.manager.props import *
 import gevent
 import time
 import wx
