@@ -1,7 +1,9 @@
 """PyOEUO script manager"""
+from contextlib import contextmanager
 from wx import Timer, EVT_TIMER
 from pyuo import app_folder
 from pyuo.manager.gui.gui import WelcomeFrame
+
 
 __author__ = 'Lai Tash'
 __email__ = 'lai.tash@gmail.com'
@@ -55,6 +57,8 @@ class ManagerSettings(SettingsManager):
     errors_to_client = BoolSetting('Notify errors in client', group='Debugging', priority=0)
     do_debug = BoolSetting('Debug (requires restart)', default=True, group='Debugging', priority=1)
     debug_show_messages = BoolSetting("Show debug messages", default=True, group='Debugging', relation=do_debug, priority=2)
+    debug_raise_exceptions = BoolSetting("Raise exceptions", default=False, group='Debugging', priority=3)
+    debug_log_exceptions = BoolSetting('Log exceptions', default=True, group='Debugging', priority=4)
 
 class ScriptsManager(object):
     def __init__(self, manager):
@@ -85,10 +89,9 @@ class ScriptsManager(object):
             if not os.path.isfile(abs_path):
                 continue
             environment = {'Manager': self.manager, 'Scripts': self}
-            try:
+            with self.manager.try_exception():
                 execfile(abs_path, environment)
-            except:
-                self.manager.log_error(traceback.format_exc())
+            if self.manager.last_exception_state:
                 continue
             for name, attr in environment.items():
                 if isinstance(attr, type) and issubclass(attr, ScriptBase) and attr.__name__.find('Script') == len(attr.__name__) - 6:
@@ -113,10 +116,8 @@ class ScriptsManager(object):
             xml_name = '%s.xml' % os.path.splitext(script_obj._file_name)[0]
             xml_path = os.path.join(folder, xml_name)
             self.manager.log_info('Saving %s' % xml_path)
-            try:
+            with self.manager.try_exception():
                 script_obj.save_xml(xml_path)
-            except:
-                self.manager.log_warning("Could not save %s, traceback:\n%s" % traceback.format_exc())
 
     def load_scripts_settings(self, profile):
         folder = self.manager.get_xml_path(profile)
@@ -128,10 +129,8 @@ class ScriptsManager(object):
             xml_name = '%s.xml' % os.path.splitext(script_obj._file_name)[0]
             xml_path = os.path.join(folder, xml_name)
             self.manager.log_info("Loading %s" % xml_path)
-            try:
+            with self.manager.try_exception():
                 script_obj.load_xml(xml_path)
-            except:
-                self.manager.log_warning('Could not load settings for %s, traceback:\n%s' % (name, traceback.format_exc()))
 
     def start_script(self, script_name):
         if not script_name in self.scripts:
@@ -188,6 +187,19 @@ class _Manager(object):
         self.exec_result = -1
         self.tasks = Group()
         self.profiled = []
+        self.last_exception_state = False
+
+    @contextmanager
+    def try_exception(self):
+        try:
+            yield
+            self.last_exception_state = False
+        except Exception as e:
+            self.last_exception_state = e
+            if self.settings.debug_log_exceptions:
+                self.log_exception(traceback.format_exc())
+            if self.settings.debug_raise_exceptions:
+                raise e
 
     def sleep(self, n):
         """
@@ -196,10 +208,8 @@ class _Manager(object):
         gevent.sleep(n)
 
     def func_wrap(self, func, *args, **kwargs):
-        try:
+        with self.try_exception():
             func(*args, **kwargs)
-        except Exception as e:
-            self.log_exception(e)
 
     def spawn(self, func, *args, **kwargs):
         task = gevent.spawn(self.func_wrap, func, *args, **kwargs)
@@ -220,20 +230,16 @@ class _Manager(object):
         return self.settings.client_window_flag in wt
 
     def load_profile(self, profile):
-        try:
+        with self.try_exception():
             self.profile = profile
             self.load_settings(profile)
             self.scripts.load_profile(profile)
             self.gui.update()
-        except:
-            self.log_error(traceback.format_exc())
 
     def save_profile(self, profile):
-        try:
+        with self.try_exception():
             self.save_settings(profile)
             self.scripts.save_scripts(profile)
-        except:
-            self.log_error(traceback.format_exc())
 
     def switch_profile(self, profile):
         self.stop()
@@ -250,15 +256,13 @@ class _Manager(object):
         self.exec_result = 1
 
     def stop(self):
-        try:
+        with self.try_exception():
             self.save_profile(self.profile)
             self.stop_all_tasks()
             self.scripts.free_all()
             self.AS_task.kill()
             self.keep_going = False
             self.show_profiled()
-        except:
-            self.log_error(traceback.format_exc())
 
     def start(self):
         try:
@@ -275,10 +279,8 @@ class _Manager(object):
         if not os.path.exists(xml_path):
             return
         self.log_info('Loading global settings')
-        try:
+        with self.try_exception():
             self.settings.load_xml(self.get_settings_xml(profile))
-        except:
-            self.log_error('Could not load settings, exception:\n %s' % traceback.format_exc())
 
     def save_settings(self, profile):
         folder = self.get_profile_path(profile)
@@ -334,15 +336,13 @@ class _Manager(object):
             gevent.sleep(self.settings.main_loop_delay)
             if self.settings.cpu_usage_limit_delay:
                 time.sleep(self.settings.cpu_usage_limit_delay)
-            try:
+            with self.try_exception():
                 if not UO.CliCnt:
                     self.quit()
                 elif not UO.CharName:
                     self.return_to_main()
                 if self.client_has_focus() or not self.settings.no_input_outside_client:
                     self.key_manager.execute()
-            except:
-                self.log_error(traceback.format_exc())
 
 
 class WelcomeScreen(object):
