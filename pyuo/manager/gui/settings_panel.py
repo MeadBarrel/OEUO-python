@@ -91,7 +91,8 @@ class ObjectBindsPanel(scrolled.ScrolledPanel):
         text_box.Value = ''
         text_box.SetBackgroundColour(wx.WHITE)
         try:
-            self.manager.key_manager.unbind(bind)
+            bind.clear_keys()
+            bind.unbind(self.manager)
         except BindError:
             dlg = wx.MessageBox(self, 'Cannot unbind: bind does not exist', 'ouch', wx.OK | wx.ICON_ERROR)
             dlg.ShowModal()

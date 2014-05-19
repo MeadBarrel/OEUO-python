@@ -1,2 +1,2 @@
 <?xml version='1.0' encoding='utf8'?>
-<root><settings><keymap keys="o" name="test hold" /><keymap keys="n" name="freeze character" /></settings></root>
+<root><settings><keymap keys="n" name="freeze character" /></settings></root>

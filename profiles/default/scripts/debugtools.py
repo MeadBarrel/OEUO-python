@@ -8,18 +8,12 @@ import wx
 
 class DebugToolsScript(ScriptBase):
     script_name = "Debug tools"
-    test_hold = HoldKeysBind('test hold')
 
     def t1(self):
         UO.SysMessage('PRESSED')
 
     def t2(self):
         UO.SysMessage('RELEASED')
-
-    def main(self):
-        while True:
-            UO.SysMessage(str(self.test_hold))
-            self.manager.sleep(.5)
 
     def load(self, manager):
         b = KeyBind(self.t1, self.t2)

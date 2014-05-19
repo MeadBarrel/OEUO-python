@@ -43,7 +43,11 @@ class KeyBind(object):
     def set_keys(self, keys):
         self.keys = keys
 
+    def clear_keys(self):
+        self.keys = None
+
     def bind(self, manager):
+        """Try to bind to the key manager with currently set keys. Should be called AFTER set_keys."""
         if not self.keys:
             raise BindError('Cannot bind to an empty string...')
         self.unbind(manager)
@@ -53,6 +57,7 @@ class KeyBind(object):
             raise BindError(E.message)
 
     def unbind(self, manager):
+        """Unbind from the key manager. Should be called BEFORE clear_keys."""
         if manager.key_manager.get_keys(self):
             manager.key_manager.unbind(self)
 
