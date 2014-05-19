@@ -1,4 +1,4 @@
-from uo.manager.manager import WelcomeScreen
+from uo.serpent.manager import WelcomeScreen
 
 WelcomeScreen().main()
 

@@ -1,6 +1,6 @@
 import wx
 import gevent
-from uo.manager.script import ScriptBase
+from uo.serpent.script import ScriptBase
 
 WIDTH = 100
 HEIGHT = 20
@@ -12,7 +12,7 @@ class Frame(wx.Frame):
 class ProgressBarScript(ScriptBase):
     script_name = 'Progress bars'
 
-    def load(self, manager):
+    def load(self):
         self.frame = Frame()
         self.frame.SetSizeWH(0, 0)
         self.frame.SetAutoLayout(True)

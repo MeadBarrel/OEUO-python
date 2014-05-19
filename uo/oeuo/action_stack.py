@@ -1,5 +1,5 @@
 from collections import deque
-#from uo.manager.props import FloatSetting
+#from uo.serpent.props import FloatSetting
 import gevent
 
 

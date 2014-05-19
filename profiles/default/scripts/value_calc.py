@@ -1,5 +1,5 @@
-from uo.manager.script import ScriptBase
-from uo.manager.props import *
+from uo.serpent.script import ScriptBase
+from uo.serpent.props import *
 from uo.tools.items import Item, get_by_id
 from uo.tools.extensions import request_target
 

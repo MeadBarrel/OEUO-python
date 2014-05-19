@@ -2,7 +2,7 @@
 from contextlib import contextmanager
 from wx import Timer, EVT_TIMER
 from uo import app_folder
-from uo.manager.gui.gui import WelcomeFrame
+from uo.serpent.gui.gui import WelcomeFrame
 
 
 __author__ = 'Lai Tash'
@@ -11,7 +11,6 @@ __license__ = "GPL"
 
 import uo
 UO, AS = uo.UO, uo.AS
-from threading import Thread
 from .props import KeyBind
 from .key_manager import KeyBinder, CombinationListener
 from .script import ScriptBase, SettingsManager, SettingsManagerError

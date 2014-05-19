@@ -1,6 +1,6 @@
 from uo.oeuo import UO, AS
-from uo.manager.props import *
-from uo.manager.script import ScriptBase
+from uo.serpent.props import *
+from uo.serpent.script import ScriptBase
 from uo.tools.extensions import request_target
 from uo.tools.items import get_by_id
 import gevent
@@ -12,7 +12,7 @@ class ToolsScript(ScriptBase):
     hide_item_list = ItemObjListSetting('Items to hide', default={})
     hide_delay = FloatSetting('Hide delay', default=.3)
 
-    def load(self, manager):
+    def load(self):
         self.update()
 
     def do_hide_item(self, id_):

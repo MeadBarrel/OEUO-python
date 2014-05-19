@@ -1,6 +1,8 @@
-from uo.manager.script import ScriptBase
+from uo.serpent.script import ScriptBase
+from uo import manager
 import gevent
 import re
+
 
 
 class BindObj(object):
@@ -11,7 +13,7 @@ class BindObj(object):
 class JournalScannerScript(ScriptBase):
     script_name = "Journal scanner"
 
-    def load(self, manager):
+    def load(self):
         """
         :type manager manager
         """

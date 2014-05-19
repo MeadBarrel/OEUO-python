@@ -1,6 +1,6 @@
 import os
 from xml.etree import cElementTree as ElementTree
-from uo.manager.props import Setting, KeyBind
+from uo.serpent.props import Setting, KeyBind
 from inspect import isfunction
 import traceback
 from .profiler import ProfiledFunc
@@ -125,7 +125,7 @@ class ScriptBase(SettingsManager):
         self.manager = manager
         if self.manager.settings.do_debug:
             self.wrap_methods()
-        self.load(manager)
+        self.load()
 
     def wrap_methods(self):
         for name, method in vars(self.__class__).iteritems():
@@ -146,7 +146,7 @@ class ScriptBase(SettingsManager):
     def free(self):
         pass
 
-    def load(self, manager):
+    def load(self):
         pass
 
     def main(self):

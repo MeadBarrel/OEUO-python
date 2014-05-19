@@ -1,6 +1,6 @@
 from uo.oeuo import UO, AS
-from uo.manager.script import ScriptBase
-from uo.manager.props import *
+from uo.serpent.script import ScriptBase
+from uo.serpent.props import *
 from uo.tools.items import get_by_id
 from uo.tools.extensions import request_target
 from uo.tools.items import *
@@ -21,7 +21,7 @@ class DebugToolsScript(ScriptBase):
             UO.SysMessage(str(manager))
             manager.sleep(1)
 
-    def load(self, manager):
+    def load(self):
         b = KeyBind(self.t1, self.t2)
         b.set_keys('p')
         b.bind(manager)

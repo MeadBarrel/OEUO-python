@@ -1,7 +1,7 @@
-from uo.manager.script import ScriptBase
+from uo.serpent.script import ScriptBase
 from uo.oeuo import UO
 from uo.tools.items import ItemFilter
-from uo.manager.props import *
+from uo.serpent.props import *
 import gevent
 import time
 import wx
@@ -13,7 +13,7 @@ class BandaidsScript(ScriptBase):
     auto = BoolSetting('Auto bandage', default=False)
     watch_journal = BoolSetting('Watch journal', default=True)
 
-    def load(self, manager):
+    def load(self):
         self.I = 1.0
         self.lhwarn = True
         self.lh_temp_warned = False

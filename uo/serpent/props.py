@@ -57,7 +57,7 @@ class KeyBind(object):
             raise BindError(E.message)
 
     def unbind(self, manager):
-        """Unbind from the key manager. Should be called BEFORE clear_keys."""
+        """Unbind from the key serpent. Should be called BEFORE clear_keys."""
         if manager.key_manager.get_keys(self):
             manager.key_manager.unbind(self)
 

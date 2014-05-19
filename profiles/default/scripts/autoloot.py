@@ -1,5 +1,5 @@
-from uo.manager.props import *
-from uo.manager.script import ScriptBase
+from uo.serpent.props import *
+from uo.serpent.script import ScriptBase
 from uo.oeuo import UO, AS
 from uo.tools.items import get_items, iter_items_async
 from itertools import ifilter
@@ -26,7 +26,7 @@ class AutoLootScript(ScriptBase):
     autoloot_disable_in_war = BoolSetting('Disable in war mode', default=False, group='Safety')
 
 
-    def load(self, manager):
+    def load(self):
         self.AS = self.manager.AS
         self.corpses_looted = set()
         self.corpses_opened = set()
@@ -103,7 +103,7 @@ class AutoLootScript(ScriptBase):
         looted = set()
         if self.autoloot_on_keyhold and not self.autoloot_hold_pressed:
             return
-#        if self.autoloot_block_rmouse and not self.manager.key_manager.get_key('RBUTTON'):
+#        if self.autoloot_block_rmouse and not self.serpent.key_manager.get_key('RBUTTON'):
 #            return
         for item in ifilter(lambda i: i.cont_id in self.corpses and i.cont_id not in self.corpses_looted, self.items):
             looted.add(item.cont_id)
