@@ -109,7 +109,7 @@ class SettingsManager(object):
             attr = getattr(self, name)
             if hasattr(attr, '_bind_deco'):
                 for bd in attr._bind_deco:
-                    self._binds.append(KeyBind(attr, *bd))
+                    self._binds.append(KeyBind(attr, None, *bd))
 
 
 class ScriptBase(SettingsManager):

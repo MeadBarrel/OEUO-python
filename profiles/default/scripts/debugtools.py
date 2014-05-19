@@ -9,6 +9,17 @@ import wx
 class DebugToolsScript(ScriptBase):
     script_name = "Debug tools"
 
+    def t1(self):
+        UO.SysMessage('PRESSED')
+
+    def t2(self):
+        UO.SysMessage('RELEASED')
+
+    def load(self, manager):
+        b = KeyBind(self.t1, self.t2)
+        b.set_keys('p')
+        b.bind(manager)
+
     @method_bind('freeze character')
     def freeze_char(self):
         if not 'A' not in UO.CharStatus:

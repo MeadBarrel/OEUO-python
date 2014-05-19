@@ -51,6 +51,7 @@ class KeyBinder(object):
         self.binds = {}
         self.paused = False
         self.last_combination = None
+        self.last_bind = None
 
     def pause(self):
         self.paused = True
@@ -94,10 +95,18 @@ class KeyBinder(object):
         if self.paused:
             return
         pressed = self.uniform('+'.join(ifilter(getkey, keys_list)))
-        for (keys, bind) in self.binds.iteritems():
-            if pressed == self.last_combination and not bind.allow_repeat:
+        if pressed == self.last_combination:
+            if self.last_bind and self.last_bind.allow_repeat:
+                self.manager.spawn(self.last_bind.invoke_on_press)
+            else:
                 return
-            if keys == pressed:
-                self.manager.spawn(bind.__call__)
+        else:
+            if self.last_bind and self.last_bind.on_release is not None:
+                self.manager.spawn(self.last_bind.invoke_on_release)
+            self.last_bind = None
+        bind = self.binds.get(pressed)
+        if bind:
+            self.manager.spawn(bind.invoke_on_press)
+            self.last_bind = bind
         self.last_combination = pressed
 

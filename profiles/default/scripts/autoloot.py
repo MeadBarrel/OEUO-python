@@ -103,8 +103,8 @@ class AutoLootScript(ScriptBase):
         looted = set()
         if self.autoloot_on_keyhold and not self.autoloot_hold_pressed:
             return
-        if self.autoloot_block_rmouse and not self.manager.key_manager.get_key('RBUTTON'):
-            return
+#        if self.autoloot_block_rmouse and not self.manager.key_manager.get_key('RBUTTON'):
+#            return
         for item in ifilter(lambda i: i.cont_id in self.corpses and i.cont_id not in self.corpses_looted, self.items):
             looted.add(item.cont_id)
             if not self.allow_loot_item(item):

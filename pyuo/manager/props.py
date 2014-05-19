@@ -7,9 +7,9 @@ import wx
 from .key_manager import BindError
 
 #region key binds
-def bind(name=None, default_keys=None, allow_repeat=False, args=None, kwargs=None):
+def bind(name=None, allow_repeat=False, args=None, kwargs=None):
     def _wraps(method):
-        new_bind = KeyBind(method, name, default_keys, allow_repeat, args, kwargs)
+        new_bind = KeyBind(method, name=name, allow_repeat=allow_repeat, args=args, kwargs=kwargs)
         if not hasattr(method, '_binds'):
             setattr(method, '_binds', [])
         getattr(method, '_binds').append(new_bind)
@@ -17,9 +17,9 @@ def bind(name=None, default_keys=None, allow_repeat=False, args=None, kwargs=Non
     return _wraps
 
 
-def method_bind(name=None, default_keys=None, allow_repeat=False, args=None, kwargs=None):
+def method_bind(name=None, allow_repeat=False, args=None, kwargs=None):
     def _wraps(method):
-        _bind_deco_ = (name, default_keys, allow_repeat, args, kwargs)
+        _bind_deco_ = (name, allow_repeat, args, kwargs)
         if not hasattr(method, '_bind_deco'):
             method._bind_deco = []
         method._bind_deco.append(_bind_deco_)
@@ -27,16 +27,18 @@ def method_bind(name=None, default_keys=None, allow_repeat=False, args=None, kwa
     return _wraps
 
 class KeyBind(object):
-    def __init__(self, method, name=None, allow_repeat=False, args=None, kwargs=None):
+    def __init__(self, on_press, on_release=None, name=None, allow_repeat=False, args=None, kwargs=None):
         if name is None:
-            name = '%s(%s%s)' % (method.__name__, ', '.join(map(str, args or [])),
+            name = '%s(%s%s)' % (on_press.__name__, ', '.join(map(str, args or [])),
                                  ', '.join(["%s=%s" % (name, value) for name, value in (kwargs or {}).iteritems()]))
         self.name = name
-        self.method = method
+        self.on_press = on_press
+        self.on_release = on_release
         self.args = args or []
         self.kwargs = kwargs or {}
-        self.keys = default_keys
         self.allow_repeat = allow_repeat
+        self.keys = None
+
 
     def set_keys(self, keys):
         self.keys = keys
@@ -54,9 +56,11 @@ class KeyBind(object):
         if manager.key_manager.get_keys(self):
             manager.key_manager.unbind(self)
 
-    def __call__(self):
-        return self.method(*self.args, **self.kwargs)
+    def invoke_on_press(self):
+        return self.on_press(*self.args, **self.kwargs)
 
+    def invoke_on_release(self):
+        return self.on_release(*self.args, **self.kwargs)
 
 #endregion
 
