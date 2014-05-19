@@ -24,7 +24,7 @@ from .props import *
 import time
 import win32gui
 
-class App(wx.App):
+class _App(wx.App):
     """A simple wx.App replacement to work as a greenlet"""
     def MainLoop(self):
         self.keepGoing = True
@@ -38,15 +38,15 @@ class App(wx.App):
             self.ProcessIdle()
         wx.EventLoop.SetActive(old)
 
-app = App()
+app = _App()
 
 class ScriptsManagerError(Exception):
     pass
 
 
-class ManagerSettings(SettingsManager):
+class _ManagerSettings(SettingsManager):
     def __init__(self, manager, key_manager):
-        super(ManagerSettings, self).__init__(key_manager)
+        super(_ManagerSettings, self).__init__(key_manager)
         self.manager = manager
 
 
@@ -63,7 +63,7 @@ class ManagerSettings(SettingsManager):
 class ScriptsManager(object):
     def __init__(self, manager):
         """
-        :type manager _Manager
+        :type manager Manager_
         """
         self.manager = manager
         self.scripts = {}
@@ -148,7 +148,7 @@ class ScriptsManager(object):
             script_obj.free()
 
 
-class ManagerGUI(object):
+class _ManagerGUI(object):
     def __init__(self, manager):
         self.app = app
         self.manager = manager
@@ -172,14 +172,14 @@ class ManagerGUI(object):
         #self.gui.update()
 
 
-class _Manager(object):
+class Manager_(object):
     def __init__(self, welcome, folder):
         uo.manager = self
         self.UO = uo.UO
         self.AS = uo.AS
         self.AS_task = None
         self.welcome = welcome
-        self.gui = ManagerGUI(self)
+        self.gui = _ManagerGUI(self)
         self.key_manager = KeyBinder(self)
         self.scripts = ScriptsManager(self)
         self.folder = folder
@@ -275,7 +275,7 @@ class _Manager(object):
             self.log_error(traceback.format_exc())
 
     def load_settings(self, profile):
-        self.settings = ManagerSettings(self, self.key_manager)
+        self.settings = _ManagerSettings(self, self.key_manager)
         xml_path = os.path.join(self.get_xml_path(profile), 'settings.xml')
         if not os.path.exists(xml_path):
             return
@@ -371,7 +371,7 @@ class WelcomeScreen(object):
 
     def run(self, profile):
         self.gui.Hide()
-        manager = _Manager(self, app_folder)
+        manager = Manager_(self, app_folder)
         UO.set_client(1)
         manager.load_profile(profile)
         manager.start()

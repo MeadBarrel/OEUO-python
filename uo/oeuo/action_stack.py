@@ -8,8 +8,6 @@ class ActionStackError(Exception):
 
 
 class _ActionStack(object):
-    #stack_delay = FloatSetting('Action delay', default=.6)
-    #todo: make this float setting
     stack_delay = .6
 
     def __init__(self, UO):
@@ -70,23 +68,56 @@ class _ActionStack(object):
 
 
 class ActionStack(_ActionStack):
+    """A class to wrap some of llUO methods to have a timeout after calling them, to prevent 'you must wait to perform
+    another action'. Instance of this class is added to execution environment as `AS` variable."""
+
     def Macro(self, param_1, param_2=0, string='', timeout=.6):
+        """Causes the client to use one of the pre-defined, internal UO client macros.
+
+        .. note::
+           Not all macro actions have a timeout, in which case you should use UO.Macro, not AS.Macro
+
+        .. seealso::
+           :py:meth:`.uo.llUO.Macro`
+        """
         return self.push_action(timeout, self.UO.Macro, param_1, param_2, string)
 
     def Drag(self, nid, namnt=None):
+        """
+
+        .. seealso::
+           :py:meth:`.uo.llUO.Drag`
+        """
         return self.push_action(.6, self.UO.Drag, nid, namnt)
 
     def DropC(self, contid, pos=None):
+        """
+
+        .. seealso::
+           :py:meth:`.uo.llUO.DropC`
+        """
         return self.push_action(.3, self.UO.DropC, contid, pos)
 
     def DropG(self, x, y, z=None):
+        """
+
+        .. seealso::
+           :py:meth:`.uo.llUO.DropG`
+        """
         return self.push_action(.3, self.UO.DropG, x, y, z)
 
     def DropPD(self):
+        """
+
+        .. seealso::
+           :py:meth:`.uo.llUO.DropPD`
+        """
         return self.push_action(.3, self.UO.DropPD)
 
-    def Equip(self, *nids):
-        return self.push_action(.6, self.UO.Equip, *nids)
-
     def CliDrag(self, nid):
+        """
+
+        .. seealso::
+           :py:meth:`.uo.llUO.CliDrag`
+        """
         return self.push_action(.6, self.UO.CliDrag, nid)

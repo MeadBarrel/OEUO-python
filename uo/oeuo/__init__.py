@@ -1,6 +1,7 @@
-from uo import _UO
+from uo import llUO
 from action_stack import ActionStack
 
-UO = _UO()
+UO = llUO()
 AS = ActionStack(UO)
+help(UO)
 print "AS:", AS
