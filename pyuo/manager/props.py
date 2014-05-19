@@ -62,8 +62,26 @@ class KeyBind(object):
     def invoke_on_release(self):
         return self.on_release(*self.args, **self.kwargs)
 
-#endregion
 
+class HoldKeysBind(KeyBind):
+    """KeyBind property that sets it's value to True when keys are pressed, and to False when released. It is not an
+    actual property, though, as it declares only __bool__ and __str__ methods instead of __getattr__/__setattr__"""
+    def __init__(self, name=None):
+        self.value = False
+        super(HoldKeysBind, self).__init__(self._on_press, self._on_release, name)
+    def _on_press(self):
+        self.value = True
+
+    def _on_release(self):
+        self.value = False
+
+    def __bool__(self):
+        return self.value
+
+    def __str__(self):
+        return str(self.value)
+
+#endregion
 
 
 #region settings
