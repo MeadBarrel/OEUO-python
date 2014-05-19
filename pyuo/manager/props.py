@@ -6,7 +6,7 @@ import wx
 
 from .key_manager import BindError
 
-
+#region key binds
 def bind(name=None, default_keys=None, allow_repeat=False, args=None, kwargs=None):
     def _wraps(method):
         new_bind = KeyBind(method, name, default_keys, allow_repeat, args, kwargs)
@@ -26,9 +26,8 @@ def method_bind(name=None, default_keys=None, allow_repeat=False, args=None, kwa
         return method
     return _wraps
 
-
 class KeyBind(object):
-    def __init__(self, method, name=None, default_keys=None, allow_repeat=False, args=None, kwargs=None):
+    def __init__(self, method, name=None, allow_repeat=False, args=None, kwargs=None):
         if name is None:
             name = '%s(%s%s)' % (method.__name__, ', '.join(map(str, args or [])),
                                  ', '.join(["%s=%s" % (name, value) for name, value in (kwargs or {}).iteritems()]))
@@ -59,6 +58,11 @@ class KeyBind(object):
         return self.method(*self.args, **self.kwargs)
 
 
+#endregion
+
+
+
+#region settings
 class SettingError(Exception):
     pass
 
@@ -566,3 +570,4 @@ class StrListSetting(Setting):
         self.wx_remove_button.Bind(wx.EVT_BUTTON, self.remove_button_pressed)
         self.wx_list.Bind(wx.EVT_LISTBOX, self.item_selected)
         return self.wx_control
+#endregion
