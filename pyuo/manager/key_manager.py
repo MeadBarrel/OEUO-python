@@ -45,7 +45,7 @@ class CombinationListener(object):
 class KeyBinder(object):
     keys_list = set(codes.keys())
 
-    def __init__(self, manager):
+    def __init__(self, manager, allow_repeat = False):
         self.manager = manager
         self.keys = {key: None for key in self.keys_list}
         self.binds = {}
@@ -94,9 +94,9 @@ class KeyBinder(object):
         if self.paused:
             return
         pressed = self.uniform('+'.join(ifilter(getkey, keys_list)))
-        if pressed == self.last_combination:
-            return
         for (keys, bind) in self.binds.iteritems():
+            if pressed == self.last_combination and not bind.allow_repeat:
+                return
             if keys == pressed:
                 self.manager.spawn(bind.__call__)
         self.last_combination = pressed

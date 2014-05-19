@@ -7,9 +7,9 @@ import wx
 from .key_manager import BindError
 
 
-def bind(name=None, default_keys=None, args=None, kwargs=None):
+def bind(name=None, default_keys=None, allow_repeat=False, args=None, kwargs=None):
     def _wraps(method):
-        new_bind = KeyBind(method, name, default_keys, args, kwargs)
+        new_bind = KeyBind(method, name, default_keys, allow_repeat, args, kwargs)
         if not hasattr(method, '_binds'):
             setattr(method, '_binds', [])
         getattr(method, '_binds').append(new_bind)
@@ -17,9 +17,9 @@ def bind(name=None, default_keys=None, args=None, kwargs=None):
     return _wraps
 
 
-def method_bind(name=None, default_keys=None, args=None, kwargs=None):
+def method_bind(name=None, default_keys=None, allow_repeat=False, args=None, kwargs=None):
     def _wraps(method):
-        _bind_deco_ = (name, default_keys, args, kwargs)
+        _bind_deco_ = (name, default_keys, allow_repeat, args, kwargs)
         if not hasattr(method, '_bind_deco'):
             method._bind_deco = []
         method._bind_deco.append(_bind_deco_)
@@ -28,7 +28,7 @@ def method_bind(name=None, default_keys=None, args=None, kwargs=None):
 
 
 class KeyBind(object):
-    def __init__(self, method, name=None, default_keys=None, args=None, kwargs=None):
+    def __init__(self, method, name=None, default_keys=None, allow_repeat=False, args=None, kwargs=None):
         if name is None:
             name = '%s(%s%s)' % (method.__name__, ', '.join(map(str, args or [])),
                                  ', '.join(["%s=%s" % (name, value) for name, value in (kwargs or {}).iteritems()]))
@@ -37,6 +37,7 @@ class KeyBind(object):
         self.args = args or []
         self.kwargs = kwargs or {}
         self.keys = default_keys
+        self.allow_repeat = allow_repeat
 
     def set_keys(self, keys):
         self.keys = keys

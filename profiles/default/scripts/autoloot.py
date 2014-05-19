@@ -10,7 +10,7 @@ class AutoLootScript(ScriptBase):
 
     gold_split_factor = IntSetting('Split gold stacks by', default=1)
     open_corpses_enabled = BoolSetting('Open corpses', group='Features')
-    autoloot_delay = FloatSetting('Autoloot delay', default=.5)
+    autoloot_delay = FloatSetting('Autoloot delay', default=.05)
     autoloot_enabled = BoolSetting('Enable autoloot', group='Features')
     autoloot_allow_all = BoolSetting('Collect all valuables', group='Rules')
     autoloot_min_value = IntSetting('Minimal item value', default=0, group='Rules')
@@ -19,6 +19,8 @@ class AutoLootScript(ScriptBase):
     autoloot_allow_items = ItemKindListSetting("Items to loot (if 'collect all' unchecked)", default={0xeed: 'gold'}, group='Rules', priority=8)
     autoloot_force_items = ItemKindListSetting("Loot even if seems not valuable", default={0xeed: 'gold'}, group='Rules', priority=9)
     autoloot_deny_items = ItemKindListSetting('Never loot', group='Rules', priority=10)
+    autoloot_on_keyhold = BoolSetting('Loot only while autoloot key is pressed', group='Crash prevention')
+    autoloot_block_rmouse = BoolSetting('Block looting if right mouse button is pressed', default=True, group='Crash prevention')
     loot_bag = ItemSetting('Loot bag', default=[UO.BackpackID, 'Backpack'], group='Bags')
     gold_bag = ItemSetting('Gold bag', default=[UO.BackpackID, 'Backpack'], group='Bags')
     autoloot_disable_in_war = BoolSetting('Disable in war mode', default=False, group='Safety')
@@ -30,11 +32,16 @@ class AutoLootScript(ScriptBase):
         self.corpses_opened = set()
         self.items = []
         self.corpses = []
+        self.autoloot_hold_pressed = False
 
     @method_bind('toggle auto loot')
     def toggle_auto_loot(self):
         self.autoloot_enabled = not self.autoloot_enabled
         UO.SysMessage('Autoloot %sabled' % ('en' if self.autoloot_enabled else 'dis'))
+
+    @method_bind('autoloot hold key')
+    def autoloot_hold(self):
+        self.autoloot_hold_pressed = True
 
     @method_bind('toggle open corpses')
     def toggle_open_corpses(self):
@@ -81,29 +88,41 @@ class AutoLootScript(ScriptBase):
             if value < self.autoloot_min_value:
                 print "nope, it's value is only", vc
                 return False
-        print "YEP!"
         return True
+
+    def try_drag(self, item_id, amt):
+        if (self.autoloot_hold_pressed or not self.autoloot_on_keyhold) and \
+                (self.manager.key_manager.get_key('RBUTTON') or not self.autoloot_block_rmouse):
+            AS.Drag(item_id, amt)
+            return True
+        return False
 
     def loot(self):
         if self.autoloot_disable_in_war and 'G' in  UO.CharStatus:
             return
         looted = set()
+        if self.autoloot_on_keyhold and not self.autoloot_hold_pressed:
+            return
+        if self.autoloot_block_rmouse and not self.manager.key_manager.get_key('RBUTTON'):
+            return
         for item in ifilter(lambda i: i.cont_id in self.corpses and i.cont_id not in self.corpses_looted, self.items):
             looted.add(item.cont_id)
             if not self.allow_loot_item(item):
                 continue
             self.manager.sleep(0)
             is_gold = item.type_ == 0xeed
-            UO.SysMessage('DRAG?')
+            dragged = False
             if self.gold_split_factor == 1 or not is_gold:
-                AS.Drag(item.id_, item.stack)
+                dragged = self.try_drag(item.id_, item.stack)
             elif self.gold_split_factor == 0:
                 continue
             else:
-                AS.Drag(item.id_, item.stack / self.gold_split_factor)
+                dragged = self.try_drag(item_id_, item.stack / self.gold_split_factor)
             self.manager.sleep(.1)
             loot_bag = (self.gold_bag if is_gold else self.loot_bag)
-            AS.DropC(loot_bag)
+            if dragged:
+                AS.DropC(loot_bag)
+            self.autoloot_hold_pressed = False
         self.corpses_looted.update(looted)
 
     def run_auto_loot(self):

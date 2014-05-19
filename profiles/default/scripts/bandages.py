@@ -91,7 +91,7 @@ class BandaidsScript(ScriptBase):
             if UO.Hits >= UO.MaxHits or not self.auto:
                 continue
             if self.current_heal:
-                hv = self.current_heal()
+                hv = self.current_heal
                 if hv <= 0: self.current_heal = None
             if not self.current_heal:
                 self.bandage_self()
@@ -103,9 +103,9 @@ class BandaidsScript(ScriptBase):
             gevent.sleep(2)
 
     def main(self):
-        gevent.sleep(0)
-        gevent.spawn(self.begin)
-        gevent.spawn(self.auto_bandage_self)
+        self.manager.sleep(0)
+        self.manager.spawn(self.begin)
+        self.manager.spawn(self.auto_bandage_self)
         self.low_health_warnings()
 
 
