@@ -16,6 +16,8 @@ def getkey(key):
     return getkey_int(key_int)
 
 keys_list = set(codes.keys())
+keys_list.remove('RBUTTON')
+keys_list.remove('LBUTTON')
 
 class CombinationListener(object):
     """Helper class to help in defining key combinations"""
@@ -44,6 +46,9 @@ class CombinationListener(object):
 
 class KeyBinder(object):
     keys_list = set(codes.keys())
+    def getkey(self, key):
+        """Check if the key is pressed"""
+        return getkey(key)
 
     def __init__(self, manager, allow_repeat = False):
         self.manager = manager

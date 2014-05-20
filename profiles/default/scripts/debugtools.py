@@ -16,11 +16,6 @@ class DebugToolsScript(ScriptBase):
     def t2(self):
         UO.SysMessage('RELEASED')
 
-    def main(self):
-        while True:
-            UO.SysMessage(str(manager))
-            manager.sleep(1)
-
     def load(self):
         b = KeyBind(self.t1, self.t2)
         b.set_keys('p')

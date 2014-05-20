@@ -1280,17 +1280,3 @@ class llUO(llUOVar):
         """Internal method to call a function from uo.dll"""
         return self.stack.execute('Call', func, *args)
 
-    #def __getattr__(self, item):
-    #    if item in self.rvars:
-    #        return self.Get(item)
-    #    return lambda *args: self.stack.execute(item, *args)
-
-    #def __setattr__(self, key, value):
-#        if key == 'rvars':
-#            self.__dict__['rvars'] = value
-    #    if key in self.rvars:
-    #        self.Set(key, value)
-    #    else:
-    #        self.__dict__[key] = value
-
-

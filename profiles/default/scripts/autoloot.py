@@ -1,6 +1,6 @@
 from uo.serpent.props import *
 from uo.serpent.script import ScriptBase
-from uo.oeuo import UO, AS
+from uo import UO, AS, manager
 from uo.tools.items import get_items, iter_items_async
 from itertools import ifilter
 import gevent
@@ -25,6 +25,7 @@ class AutoLootScript(ScriptBase):
     gold_bag = ItemSetting('Gold bag', default=[UO.BackpackID, 'Backpack'], group='Bags')
     autoloot_disable_in_war = BoolSetting('Disable in war mode', default=False, group='Safety')
 
+    autoloot_hold_pressed = HoldKeysBind('Hold to allow autoloot')
 
     def load(self):
         self.AS = self.manager.AS
@@ -32,16 +33,11 @@ class AutoLootScript(ScriptBase):
         self.corpses_opened = set()
         self.items = []
         self.corpses = []
-        self.autoloot_hold_pressed = False
 
     @method_bind('toggle auto loot')
     def toggle_auto_loot(self):
         self.autoloot_enabled = not self.autoloot_enabled
         UO.SysMessage('Autoloot %sabled' % ('en' if self.autoloot_enabled else 'dis'))
-
-    @method_bind('autoloot hold key')
-    def autoloot_hold(self):
-        self.autoloot_hold_pressed = True
 
     @method_bind('toggle open corpses')
     def toggle_open_corpses(self):
@@ -92,7 +88,7 @@ class AutoLootScript(ScriptBase):
 
     def try_drag(self, item_id, amt):
         if (self.autoloot_hold_pressed or not self.autoloot_on_keyhold) and \
-                (self.manager.key_manager.get_key('RBUTTON') or not self.autoloot_block_rmouse):
+                (not self.manager.key_manager.getkey('RBUTTON') or not self.autoloot_block_rmouse):
             AS.Drag(item_id, amt)
             return True
         return False
@@ -103,8 +99,8 @@ class AutoLootScript(ScriptBase):
         looted = set()
         if self.autoloot_on_keyhold and not self.autoloot_hold_pressed:
             return
-#        if self.autoloot_block_rmouse and not self.serpent.key_manager.get_key('RBUTTON'):
-#            return
+        if self.autoloot_block_rmouse and manager.key_manager.getkey('RBUTTON'):
+            return
         for item in ifilter(lambda i: i.cont_id in self.corpses and i.cont_id not in self.corpses_looted, self.items):
             looted.add(item.cont_id)
             if not self.allow_loot_item(item):
@@ -117,12 +113,11 @@ class AutoLootScript(ScriptBase):
             elif self.gold_split_factor == 0:
                 continue
             else:
-                dragged = self.try_drag(item_id_, item.stack / self.gold_split_factor)
+                dragged = self.try_drag(item.id_, item.stack / self.gold_split_factor)
             self.manager.sleep(.1)
             loot_bag = (self.gold_bag if is_gold else self.loot_bag)
             if dragged:
                 AS.DropC(loot_bag)
-            self.autoloot_hold_pressed = False
         self.corpses_looted.update(looted)
 
     def run_auto_loot(self):

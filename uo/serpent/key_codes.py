@@ -2,7 +2,7 @@ from string import ascii_lowercase
 
 local_codes = {
     'LBUTTON': 0x01,
-    'RBUTTON': 0x02,
+     'RBUTTON': 0x02,
     'CANCEL': 0x03,
     'MBUTTON': 0x04,
     'X1BUTTON': 0x05,

@@ -1,5 +1,5 @@
 from uo.serpent.script import ScriptBase
-from uo.oeuo import UO
+from uo import UO, AS, manager
 from uo.tools.items import ItemFilter
 from uo.serpent.props import *
 import gevent
@@ -20,12 +20,12 @@ class BandaidsScript(ScriptBase):
         self.continue_auto = True
         self.bandaids = None
         self.current_heal = None
-        if 'journal_event' in Manager.scripts.scripts:
+        if 'journal_event' in manager.scripts.scripts:
             strings = ('That being is not damaged',
                        'You apply the bandages, but they barely help.',
                        'You finish applying the bandages'
             )
-            Manager.scripts.scripts['journal_event'].bind('|'.join(strings), self.inform_red)
+            manager.scripts.scripts['journal_event'].bind('|'.join(strings), self.inform_red)
 
     def inform_red(self, line):
         if not self.watch_journal:
@@ -71,7 +71,7 @@ class BandaidsScript(ScriptBase):
             return (time_to_heal - passed) / time_to_heal
         self.current_heal = clb
         if 'Progress bars' in Manager.scripts.scripts:
-            Manager.scripts.scripts['Progress bars'].add_bar('first', wx.GREEN_BRUSH, clb)
+            manager.scripts.scripts['Progress bars'].add_bar('first', wx.GREEN_BRUSH, clb)
 
     def low_health_warnings(self):
         while True:
@@ -88,14 +88,13 @@ class BandaidsScript(ScriptBase):
     def auto_bandage_self(self):
         while True:
             gevent.sleep(.2)
+            if self.current_heal:
+                hv = self.current_heal()
+                if hv <= 0: self.current_heal = None
             if UO.Hits >= UO.MaxHits or not self.auto:
                 continue
-            if self.current_heal:
-                hv = self.current_heal
-                if hv <= 0: self.current_heal = None
             if not self.current_heal:
                 self.bandage_self()
-
 
     def begin(self):
         while True:
